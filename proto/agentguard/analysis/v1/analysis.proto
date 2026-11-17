@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package agentguard.analysis.v1;
+
+// The result of one analysis of an Agent Deployment.
+message AnalysisResult {
+  // Reach Paths found, in a deterministic order.
+  repeated ReachPath reach_paths = 1;
+}
+
+// An evidence-backed chain from an Agent Deployment through a Tool and an
+// Identity to a permission on a resource, ending in an Impact.
+message ReachPath {
+  // Name of the Agent Deployment the path starts from.
+  string agent_deployment = 1;
+  // The path's links, in order from the Tool to the Impact.
+  repeated Link links = 2;
+}
+
+// The kind of a link in a Reach Path.
+enum LinkKind {
+  LINK_KIND_UNSPECIFIED = 0;
+  // A Tool the agent is configured to invoke.
+  LINK_KIND_TOOL = 1;
+  // An Identity the agent can act as.
+  LINK_KIND_IDENTITY = 2;
+  // An Identity Hop from the previous Identity to the next one.
+  LINK_KIND_IDENTITY_HOP = 3;
+  // A Native Permission on a resource.
+  LINK_KIND_NATIVE_PERMISSION = 4;
+  // An Impact attached to the Native Permission.
+  LINK_KIND_IMPACT = 5;
+}
+
+// One link in a Reach Path.
+message Link {
+  LinkKind kind = 1;
+  // Human-readable description of the link, for example "Linux user deploy".
+  string label = 2;
+  // Where the link comes from.
+  Evidence evidence = 3;
+}
+
+// The evidence behind a link.
+message Evidence {
+  // The Evidence Source, for example a config file or a Snapshot file.
+  string source = 1;
+  // Location inside the source, as a JSONPath.
+  string location = 2;
+}

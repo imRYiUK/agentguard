@@ -1,0 +1,273 @@
+// Package analysis is AgentGuard's core library. Analyze takes an Analysis
+// Input and returns the Reach Paths of the Agent Deployment it describes.
+// Parsing, Identity Binding, Identity Hops, policy evaluation, and Impact
+// mapping all sit behind it.
+package analysis
+
+import (
+	"bytes"
+	"cmp"
+	"encoding/json"
+	"fmt"
+	"slices"
+	"strconv"
+	"strings"
+
+	analysisv1 "github.com/imRYiUK/agentguard/proto/gen/go/agentguard/analysis/v1"
+	snapshotv1 "github.com/imRYiUK/agentguard/proto/gen/go/agentguard/snapshot/v1"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/imRYiUK/agentguard/core/internal/agentconfig"
+	"github.com/imRYiUK/agentguard/core/internal/awspolicy"
+	"github.com/imRYiUK/agentguard/core/internal/impact"
+)
+
+// File is one input file and the name it is reported under in evidence.
+type File struct {
+	Source  string
+	Content []byte
+}
+
+// Input is an Analysis Input: everything one analysis runs over.
+type Input struct {
+	// AgentDeployment names the Agent Deployment under analysis.
+	AgentDeployment string
+	// ClaudeCodeSettings are Claude Code settings files.
+	ClaudeCodeSettings []File
+	// MCPConfigs are MCP configuration files.
+	MCPConfigs []File
+	// Snapshots are Snapshot files in Protobuf canonical JSON.
+	Snapshots []File
+}
+
+// Analyze returns the Reach Paths found in the Analysis Input. The same
+// input always gives the same result.
+func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
+	impacts, err := impact.Default()
+	if err != nil {
+		return nil, err
+	}
+	tools, err := agentconfig.ShellTools(configFiles(in.MCPConfigs), configFiles(in.ClaudeCodeSettings))
+	if err != nil {
+		return nil, err
+	}
+	linux, aws, err := readSnapshots(in.Snapshots)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &analysisv1.AnalysisResult{}
+	for _, tool := range tools {
+		toolLink := link(analysisv1.LinkKind_LINK_KIND_TOOL,
+			fmt.Sprintf("shell Tool (MCP server %s)", tool.Server), tool.Source, tool.Location)
+		for _, host := range linux {
+			hops, err := credentialHops(host, aws)
+			if err != nil {
+				return nil, err
+			}
+			for _, hop := range hops {
+				for _, perm := range hop.to.grants {
+					for _, m := range impacts.Lookup(perm.Action) {
+						result.ReachPaths = append(result.ReachPaths, &analysisv1.ReachPath{
+							AgentDeployment: in.AgentDeployment,
+							Links: []*analysisv1.Link{
+								toolLink,
+								host.userLink,
+								hop.link,
+								hop.to.link,
+								perm.link,
+								link(analysisv1.LinkKind_LINK_KIND_IMPACT, m.Impact, m.Source, m.Location),
+							},
+						})
+					}
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
+// MarshalJSON encodes a result as indented JSON. The encoding is stable, so
+// the same result always gives byte-identical output.
+func MarshalJSON(result *analysisv1.AnalysisResult) ([]byte, error) {
+	// protojson deliberately varies its whitespace between builds, so the
+	// output is re-indented to make it byte-stable.
+	raw, err := protojson.Marshal(result)
+	if err != nil {
+		return nil, err
+	}
+	var out bytes.Buffer
+	if err := json.Indent(&out, raw, "", "  "); err != nil {
+		return nil, err
+	}
+	out.WriteByte('\n')
+	return out.Bytes(), nil
+}
+
+func configFiles(files []File) []agentconfig.File {
+	out := make([]agentconfig.File, len(files))
+	for i, f := range files {
+		out[i] = agentconfig.File{Source: f.Source, Content: f.Content}
+	}
+	slices.SortFunc(out, func(a, b agentconfig.File) int { return cmp.Compare(a.Source, b.Source) })
+	return out
+}
+
+// linuxHost is the analysis view of a Linux Snapshot.
+type linuxHost struct {
+	source   string
+	payload  *snapshotv1.LinuxPayload
+	userLink *analysisv1.Link
+}
+
+// awsIdentity is the analysis view of one AWS Identity in an AWS Snapshot.
+type awsIdentity struct {
+	identity *snapshotv1.AwsIdentity
+	link     *analysisv1.Link
+	grants   []permission
+}
+
+type permission struct {
+	awspolicy.Grant
+	link *analysisv1.Link
+}
+
+// hop is an Identity Hop from a Linux user to an AWS Identity.
+type hop struct {
+	link *analysisv1.Link
+	to   *awsIdentity
+}
+
+func readSnapshots(files []File) ([]*linuxHost, []*awsIdentity, error) {
+	files = slices.Clone(files)
+	slices.SortFunc(files, func(a, b File) int { return cmp.Compare(a.Source, b.Source) })
+
+	var hosts []*linuxHost
+	var identities []*awsIdentity
+	for _, f := range files {
+		var snap snapshotv1.Snapshot
+		if err := protojson.Unmarshal(f.Content, &snap); err != nil {
+			return nil, nil, fmt.Errorf("%s: invalid Snapshot: %w", f.Source, err)
+		}
+		switch p := snap.Payload.(type) {
+		case *snapshotv1.Snapshot_Linux:
+			user := p.Linux.GetAgentUser()
+			if user == nil {
+				return nil, nil, fmt.Errorf("%s: invalid Snapshot: linux.agentUser is required", f.Source)
+			}
+			hosts = append(hosts, &linuxHost{
+				source:  f.Source,
+				payload: p.Linux,
+				userLink: link(analysisv1.LinkKind_LINK_KIND_IDENTITY,
+					fmt.Sprintf("Linux user %s (uid %d)", user.GetName(), user.GetUid()),
+					f.Source, "$.linux.agentUser"),
+			})
+		case *snapshotv1.Snapshot_Aws:
+			for i, id := range p.Aws.GetIdentities() {
+				ident, err := readAWSIdentity(f.Source, fmt.Sprintf("$.aws.identities[%d]", i), id)
+				if err != nil {
+					return nil, nil, err
+				}
+				identities = append(identities, ident)
+			}
+		default:
+			return nil, nil, fmt.Errorf("%s: invalid Snapshot: it has no linux or aws payload", f.Source)
+		}
+	}
+	return hosts, identities, nil
+}
+
+func readAWSIdentity(source, location string, id *snapshotv1.AwsIdentity) (*awsIdentity, error) {
+	ident := &awsIdentity{
+		identity: id,
+		link:     link(analysisv1.LinkKind_LINK_KIND_IDENTITY, awsIdentityLabel(id.GetArn()), source, location),
+	}
+	for i, policy := range id.GetPolicies() {
+		docLocation := fmt.Sprintf("%s.policies[%d].document", location, i)
+		grants, err := awspolicy.Grants(policy.GetDocument())
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s: %w", source, docLocation, err)
+		}
+		for _, g := range grants {
+			ident.grants = append(ident.grants, permission{
+				Grant: g,
+				link: link(analysisv1.LinkKind_LINK_KIND_NATIVE_PERMISSION,
+					fmt.Sprintf("Allow %s on %s", g.Action, g.Resource),
+					source, docLocation+strings.TrimPrefix(g.Location, "$")),
+			})
+		}
+	}
+	return ident, nil
+}
+
+func awsIdentityLabel(arn string) string {
+	switch {
+	case strings.Contains(arn, ":role/"):
+		return "AWS role " + arn
+	case strings.Contains(arn, ":user/"):
+		return "AWS user " + arn
+	default:
+		return "AWS Identity " + arn
+	}
+}
+
+// credentialHops returns the Identity Hops from a host's agent user to AWS
+// Identities, through AWS credential files that user can read.
+func credentialHops(host *linuxHost, identities []*awsIdentity) ([]hop, error) {
+	user := host.payload.GetAgentUser()
+	var hops []hop
+	for i, file := range host.payload.GetCredentialFiles() {
+		if file.GetKind() != snapshotv1.CredentialKind_CREDENTIAL_KIND_AWS_SHARED_CREDENTIALS {
+			continue
+		}
+		readable, err := canRead(user, file)
+		if err != nil {
+			return nil, fmt.Errorf("%s: invalid Snapshot: $.linux.credentialFiles[%d].mode: %w", host.source, i, err)
+		}
+		if !readable {
+			continue
+		}
+		for j, profile := range file.GetAwsProfiles() {
+			for _, ident := range identities {
+				if profile.GetAccessKeyIdFingerprint() == "" ||
+					!slices.Contains(ident.identity.GetAccessKeyIdFingerprints(), profile.GetAccessKeyIdFingerprint()) {
+					continue
+				}
+				hops = append(hops, hop{
+					link: link(analysisv1.LinkKind_LINK_KIND_IDENTITY_HOP,
+						fmt.Sprintf("can read AWS credential file %s (profile %s)", file.GetPath(), profile.GetName()),
+						host.source, fmt.Sprintf("$.linux.credentialFiles[%d].awsProfiles[%d]", i, j)),
+					to: ident,
+				})
+			}
+		}
+	}
+	return hops, nil
+}
+
+// canRead reports whether a Linux user can read a file, from the file's
+// owner, group, and permission bits.
+func canRead(user *snapshotv1.LinuxUser, file *snapshotv1.CredentialFile) (bool, error) {
+	mode, err := strconv.ParseUint(file.GetMode(), 8, 12)
+	if err != nil {
+		return false, fmt.Errorf("%q is not an octal permission mode", file.GetMode())
+	}
+	switch {
+	case user.GetUid() == 0:
+		return true, nil
+	case user.GetUid() == file.GetOwnerUid():
+		return mode&0o400 != 0, nil
+	case slices.ContainsFunc(user.GetGroups(), func(g *snapshotv1.LinuxGroup) bool { return g.GetGid() == file.GetGroupGid() }):
+		return mode&0o040 != 0, nil
+	default:
+		return mode&0o004 != 0, nil
+	}
+}
+
+func link(kind analysisv1.LinkKind, label, source, location string) *analysisv1.Link {
+	return &analysisv1.Link{
+		Kind:     kind,
+		Label:    label,
+		Evidence: &analysisv1.Evidence{Source: source, Location: location},
+	}
+}

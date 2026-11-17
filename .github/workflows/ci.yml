@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  BUF_VERSION: 1.57.0
+  PROTOC_GEN_GO_VERSION: v1.36.10
+
+jobs:
+  contracts:
+    name: Contracts (buf)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: false
+      - uses: bufbuild/buf-action@v1
+        with:
+          version: ${{ env.BUF_VERSION }}
+          setup_only: true
+      - name: Lint
+        run: buf lint proto
+      - name: Format
+        run: buf format --diff --exit-code proto
+      - name: Breaking-change check
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if git ls-tree -r --name-only "$BASE_SHA" -- proto | grep -q '\.proto$'; then
+            buf breaking proto --against ".git#ref=${BASE_SHA},subdir=proto"
+          else
+            echo "The base commit has no contracts yet; nothing to compare against."
+          fi
+      - name: Generated code is up to date
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@${PROTOC_GEN_GO_VERSION}
+          (cd proto && buf generate)
+          git diff --exit-code -- proto/gen
+          test -z "$(git status --porcelain -- proto/gen)"
+
+  go:
+    name: Go (${{ matrix.module }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [proto, core, cli]
+    defaults:
+      run:
+        working-directory: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache-dependency-path: ${{ matrix.module }}/go.sum
+      - name: gofmt
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - name: go vet
+        run: go vet ./...
+      - name: go test
+        run: go test ./...

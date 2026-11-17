@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "mappings": [
+    {
+      "action": "s3:*",
+      "impacts": ["Destroy Data"]
+    }
+  ]
+}
