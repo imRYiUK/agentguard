@@ -1,0 +1,635 @@
+{
+  "reachPaths": [
+    {
+      "agentDeployment": "deploy-agent",
+      "links": [
+        {
+          "kind": "LINK_KIND_TOOL",
+          "label": "shell Tool (MCP server shell)",
+          "evidence": {
+            "source": ".mcp.json",
+            "location": "$.mcpServers.shell"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "Linux user deploy (uid 1001)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.agentUser"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY_HOP",
+          "label": "can read AWS credential file /home/ops/.aws/credentials (profile ops)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.credentialFiles[0].awsProfiles[0]"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "AWS role arn:aws:iam::123456789012:role/ops",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_NATIVE_PERMISSION",
+          "label": "Allow s3:* on *",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0].policies[0].document.Statement[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IMPACT",
+          "label": "Read Data",
+          "evidence": {
+            "source": "agentguard:impact-mappings/v2",
+            "location": "$.mappings[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        }
+      ],
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:9b81eab48df251abfeee7752aac4a5678c1aa8d6275f061145d77679373812fe",
+      "severity": "SEVERITY_UNKNOWN",
+      "resourceSensitivity": "SENSITIVITY_UNKNOWN",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
+    },
+    {
+      "agentDeployment": "deploy-agent",
+      "links": [
+        {
+          "kind": "LINK_KIND_TOOL",
+          "label": "shell Tool (MCP server shell)",
+          "evidence": {
+            "source": ".mcp.json",
+            "location": "$.mcpServers.shell"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "Linux user deploy (uid 1001)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.agentUser"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY_HOP",
+          "label": "can read AWS credential file /home/ops/.aws/credentials (profile ops)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.credentialFiles[0].awsProfiles[0]"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "AWS role arn:aws:iam::123456789012:role/ops",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_NATIVE_PERMISSION",
+          "label": "Allow s3:* on *",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0].policies[0].document.Statement[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IMPACT",
+          "label": "Modify Data",
+          "evidence": {
+            "source": "agentguard:impact-mappings/v2",
+            "location": "$.mappings[2]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        }
+      ],
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:ebb33c15021118577a7c69ebfb148341f24fa3fb24590a930ab8e3fa3e28b71b",
+      "severity": "SEVERITY_UNKNOWN",
+      "resourceSensitivity": "SENSITIVITY_UNKNOWN",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
+    },
+    {
+      "agentDeployment": "deploy-agent",
+      "links": [
+        {
+          "kind": "LINK_KIND_TOOL",
+          "label": "shell Tool (MCP server shell)",
+          "evidence": {
+            "source": ".mcp.json",
+            "location": "$.mcpServers.shell"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "Linux user deploy (uid 1001)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.agentUser"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY_HOP",
+          "label": "can read AWS credential file /home/ops/.aws/credentials (profile ops)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.credentialFiles[0].awsProfiles[0]"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "AWS role arn:aws:iam::123456789012:role/ops",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_NATIVE_PERMISSION",
+          "label": "Allow s3:* on *",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0].policies[0].document.Statement[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IMPACT",
+          "label": "Destroy Data",
+          "evidence": {
+            "source": "agentguard:impact-mappings/v2",
+            "location": "$.mappings[3]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        }
+      ],
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:29b263e9a34e670d0cd272537f0d69415dc8f45e7688395146b219010dcb10f9",
+      "severity": "SEVERITY_UNKNOWN",
+      "resourceSensitivity": "SENSITIVITY_UNKNOWN",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
+    },
+    {
+      "agentDeployment": "deploy-agent",
+      "links": [
+        {
+          "kind": "LINK_KIND_TOOL",
+          "label": "shell Tool (MCP server shell)",
+          "evidence": {
+            "source": ".mcp.json",
+            "location": "$.mcpServers.shell"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "Linux user deploy (uid 1001)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.agentUser"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY_HOP",
+          "label": "can read AWS credential file /home/ops/.aws/credentials (profile ops)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.credentialFiles[0].awsProfiles[0]"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "AWS role arn:aws:iam::123456789012:role/ops",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_NATIVE_PERMISSION",
+          "label": "Allow s3:* on *",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0].policies[0].document.Statement[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IMPACT",
+          "label": "Exfiltrate",
+          "evidence": {
+            "source": "agentguard:impact-mappings/v2",
+            "location": "$.mappings[7]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        }
+      ],
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:20aa54eac58194265784c423644f35b544093e25becc328c247ed5d549826301",
+      "severity": "SEVERITY_UNKNOWN",
+      "resourceSensitivity": "SENSITIVITY_UNKNOWN",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
+    },
+    {
+      "agentDeployment": "deploy-agent",
+      "links": [
+        {
+          "kind": "LINK_KIND_TOOL",
+          "label": "shell Tool (MCP server shell)",
+          "evidence": {
+            "source": ".mcp.json",
+            "location": "$.mcpServers.shell"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "Linux user deploy (uid 1001)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.agentUser"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY_HOP",
+          "label": "can read AWS credential file /home/ops/.aws/credentials (profile ops)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.credentialFiles[0].awsProfiles[0]"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "AWS role arn:aws:iam::123456789012:role/ops",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_NATIVE_PERMISSION",
+          "label": "Allow ec2:DescribeInstances on *",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0].policies[0].document.Statement[1]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IMPACT",
+          "label": "unknown",
+          "evidence": {
+            "source": "agentguard:impact-mappings/v2",
+            "location": "$.mappings"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        }
+      ],
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:007e334db8da1f060b6efa7a7ee7b672a964cd231df26df6ec5feaa08649bf2f",
+      "severity": "SEVERITY_UNKNOWN",
+      "resourceSensitivity": "SENSITIVITY_UNKNOWN",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
+    },
+    {
+      "agentDeployment": "deploy-agent",
+      "links": [
+        {
+          "kind": "LINK_KIND_TOOL",
+          "label": "shell Tool (MCP server shell)",
+          "evidence": {
+            "source": ".mcp.json",
+            "location": "$.mcpServers.shell"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "Linux user deploy (uid 1001)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.agentUser"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY_HOP",
+          "label": "can read AWS credential file /home/ops/.aws/credentials (profile ops)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.credentialFiles[0].awsProfiles[0]"
+          },
+          "confidence": "CONFIDENCE_REDUCED",
+          "confidenceReason": "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "AWS role arn:aws:iam::123456789012:role/ops",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
+        },
+        {
+          "kind": "LINK_KIND_NATIVE_PERMISSION",
+          "label": "Allow logs:GetLogEvents on *",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0].policies[0].document.Statement[1]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IMPACT",
+          "label": "unknown",
+          "evidence": {
+            "source": "agentguard:impact-mappings/v2",
+            "location": "$.mappings"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        }
+      ],
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:893fb7aaa06bf7f8f2c5fb0f1c611dfb787d51eab6bdedc92677c11ccf7342b0",
+      "severity": "SEVERITY_UNKNOWN",
+      "resourceSensitivity": "SENSITIVITY_UNKNOWN",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis",
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
+    }
+  ],
+  "impactMappingVersion": "2",
+  "secondaryFindings": [
+    {
+      "kind": "SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION",
+      "agentDeployment": "deploy-agent",
+      "label": "unrestricted command execution: shell Tool (MCP server shell)",
+      "evidence": {
+        "source": ".mcp.json",
+        "location": "$.mcpServers.shell"
+      },
+      "confidence": "CONFIDENCE_HIGH"
+    },
+    {
+      "kind": "SECONDARY_FINDING_KIND_WILDCARD_POLICY",
+      "agentDeployment": "deploy-agent",
+      "label": "wildcard policy: Allow s3:* on * (AWS role arn:aws:iam::123456789012:role/ops)",
+      "evidence": {
+        "source": "snapshots/aws.json",
+        "location": "$.aws.identities[0].policies[0].document.Statement[0]"
+      },
+      "confidence": "CONFIDENCE_HIGH"
+    }
+  ],
+  "analysisInput": {
+    "manifestVersion": 1,
+    "manifestDigest": "sha256:efa754d2784d306915c3a5a68d786db57131a169500e35ea1a2157ac4abbdb2d",
+    "snapshots": [
+      {
+        "environment": "build-host",
+        "snapshotId": "snap-linux-0001",
+        "source": "snapshots/linux.json",
+        "collectedAt": "2026-11-01T10:00:00Z",
+        "stale": true
+      },
+      {
+        "environment": "prod-aws",
+        "snapshotId": "snap-aws-0001",
+        "source": "snapshots/aws.json",
+        "collectedAt": "2026-11-17T10:05:00Z"
+      }
+    ],
+    "analyzedAt": "2026-11-17T12:00:00Z",
+    "stalenessThreshold": "604800s"
+  },
+  "rulesVersion": "1",
+  "blindSpots": [
+    {
+      "environment": "build-host",
+      "snapshotId": "snap-linux-0001",
+      "attempted": "read /etc/sudoers",
+      "reason": "permission denied",
+      "evidence": {
+        "source": "snapshots/linux.json",
+        "location": "$.blindSpots[0]"
+      }
+    },
+    {
+      "environment": "prod-aws",
+      "snapshotId": "snap-aws-0001",
+      "attempted": "organizations:ListPolicies (SCPs)",
+      "reason": "not collected",
+      "evidence": {
+        "source": "snapshots/aws.json",
+        "location": "$.blindSpots[0]"
+      }
+    }
+  ]
+}

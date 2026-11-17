@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package agentguard.analysis.v1;
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
 // The result of one analysis of an Agent Deployment.
 message AnalysisResult {
   // Reach Paths found, in a deterministic order.
@@ -11,6 +14,60 @@ message AnalysisResult {
   // Single-layer issues found, in a deterministic order. They are reported
   // whether or not a Reach Path exists.
   repeated SecondaryFinding secondary_findings = 3;
+  // The exact Snapshots and Agent Manifest the result was computed from.
+  AnalysisInput analysis_input = 4;
+  // Version of the analysis rules (policy semantics, Identity Hop rules,
+  // confidence and severity rules) that produced the result. It changes
+  // whenever a rule change can change a result.
+  string rules_version = 5;
+  // Every Blind Spot of every Snapshot in the Analysis Input, in the order
+  // of the Environments in the manifest. None is hidden, whether or not a
+  // Reach Path passes through it.
+  repeated BlindSpot blind_spots = 6;
+}
+
+// The Analysis Input of one analysis: what makes the result reproducible.
+message AnalysisInput {
+  // The schema version of the Agent Manifest, its "version" field.
+  int32 manifest_version = 1;
+  // SHA-256 of the Agent Manifest's bytes, as "sha256:<hex>". It names the
+  // exact manifest, which its schema version alone does not.
+  string manifest_digest = 2;
+  // The Snapshots used, one per Environment, in manifest order.
+  repeated SnapshotRef snapshots = 3;
+  // The time Snapshot ages were measured against.
+  google.protobuf.Timestamp analyzed_at = 4;
+  // A Snapshot older than this is a Stale Snapshot.
+  google.protobuf.Duration staleness_threshold = 5;
+}
+
+// A Snapshot used in an Analysis Input.
+message SnapshotRef {
+  // Name of the Environment in the Agent Manifest.
+  string environment = 1;
+  // The Snapshot's own ID.
+  string snapshot_id = 2;
+  // The Snapshot file, relative to the manifest's folder.
+  string source = 3;
+  // When the Snapshot was collected.
+  google.protobuf.Timestamp collected_at = 4;
+  // True when the Snapshot is older than the staleness threshold.
+  bool stale = 5;
+}
+
+// A fact a Collector tried to gather but could not, as recorded in a
+// Snapshot.
+message BlindSpot {
+  // Name of the Environment the Snapshot describes.
+  string environment = 1;
+  // ID of the Snapshot that records it.
+  string snapshot_id = 2;
+  // What the Collector tried to gather.
+  string attempted = 3;
+  // Why it failed.
+  string reason = 4;
+  // Where the Snapshot records it.
+  Evidence evidence = 5;
 }
 
 // An evidence-backed chain from an Agent Deployment through a Tool and an
@@ -20,8 +77,48 @@ message ReachPath {
   string agent_deployment = 1;
   // The path's links, in order from the Tool to the Impact.
   repeated Link links = 2;
-  // How far to trust the path: the weakest confidence of its links.
+  // How far to trust the path: the weakest confidence of its links, lowered
+  // to reduced by any Blind Spot that affects it.
   Confidence confidence = 3;
+  // The identity of the path across analyses. It is derived only from the
+  // path's structure, never from evidence details, Snapshot IDs, or times.
+  string fingerprint = 4;
+  // Impact of the path's final link combined with the Resource Sensitivity
+  // of its resource.
+  Severity severity = 5;
+  // The Resource Sensitivity of the path's resource: the highest label whose
+  // pattern the resource can match, or unknown when none does.
+  Sensitivity resource_sensitivity = 6;
+  // The Blind Spots of the Snapshots the path draws on. Each lowers the
+  // path's confidence.
+  repeated BlindSpot blind_spots = 7;
+  // Every reason the path's confidence is reduced: those of its links, then
+  // its Blind Spots. Empty when the confidence is high.
+  repeated string confidence_reasons = 8;
+}
+
+// How much a Reach Path matters: its Impact combined with the Resource
+// Sensitivity of its resource.
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  // The Impact or the Resource Sensitivity is unknown. AgentGuard never
+  // guesses either.
+  SEVERITY_UNKNOWN = 1;
+  SEVERITY_LOW = 2;
+  SEVERITY_MEDIUM = 3;
+  SEVERITY_HIGH = 4;
+  SEVERITY_CRITICAL = 5;
+}
+
+// A Resource Sensitivity label.
+enum Sensitivity {
+  SENSITIVITY_UNSPECIFIED = 0;
+  // No label in the Agent Manifest applies to the resource.
+  SENSITIVITY_UNKNOWN = 1;
+  SENSITIVITY_LOW = 2;
+  SENSITIVITY_MEDIUM = 3;
+  SENSITIVITY_HIGH = 4;
+  SENSITIVITY_CRITICAL = 5;
 }
 
 // How far to trust a link or a path.

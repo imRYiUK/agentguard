@@ -95,11 +95,10 @@ func TestUnmappedPermissionShowsImpactUnknown(t *testing.T) {
 }
 
 func TestUnknownImpactCitesTheMappingTable(t *testing.T) {
-	files := withPolicy(t, `[{"Effect":"Allow","Action":"ec2:RunInstances","Resource":"*"}]`)
-	result, err := analysis.Analyze(analysis.Input{Files: files})
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Blind Spots would lower the confidence for their own reason, so leave
+	// them out and pin the clock, to look at the Impact alone.
+	files := withoutBlindSpots(t, withPolicy(t, `[{"Effect":"Allow","Action":"ec2:RunInstances","Resource":"*"}]`))
+	result := analyzeAt(t, analysis.Input{Files: files})
 	last := result.ReachPaths[0].Links[len(result.ReachPaths[0].Links)-1]
 	if last.Kind != analysisv1.LinkKind_LINK_KIND_IMPACT || last.Label != "unknown" {
 		t.Fatalf("want an unknown Impact link, got %v", last)
@@ -169,10 +168,9 @@ func TestAnImpactIsHighConfidenceWhenAnyMappedActionGivesItWithoutDoubt(t *testi
 	files := withPolicy(t, `[
 		{"Effect":"Allow","Action":"s3:Get*","Resource":"*"},
 		{"Effect":"Deny","Action":"s3:GetObject","Resource":"*","Condition":{"Bool":{"aws:SecureTransport":"false"}}}]`)
-	result, err := analysis.Analyze(analysis.Input{Files: files})
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Leave out the Blind Spots and pin the clock, which would lower the
+	// confidence for their own reasons.
+	result := analyzeAt(t, analysis.Input{Files: withoutBlindSpots(t, files)})
 	if len(result.ReachPaths) != 1 {
 		t.Fatalf("want one Reach Path, got %v", result.ReachPaths)
 	}

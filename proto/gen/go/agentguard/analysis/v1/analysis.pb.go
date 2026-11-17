@@ -9,6 +9,8 @@ package analysisv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -20,6 +22,128 @@ const (
 	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
+
+// How much a Reach Path matters: its Impact combined with the Resource
+// Sensitivity of its resource.
+type Severity int32
+
+const (
+	Severity_SEVERITY_UNSPECIFIED Severity = 0
+	// The Impact or the Resource Sensitivity is unknown. AgentGuard never
+	// guesses either.
+	Severity_SEVERITY_UNKNOWN  Severity = 1
+	Severity_SEVERITY_LOW      Severity = 2
+	Severity_SEVERITY_MEDIUM   Severity = 3
+	Severity_SEVERITY_HIGH     Severity = 4
+	Severity_SEVERITY_CRITICAL Severity = 5
+)
+
+// Enum value maps for Severity.
+var (
+	Severity_name = map[int32]string{
+		0: "SEVERITY_UNSPECIFIED",
+		1: "SEVERITY_UNKNOWN",
+		2: "SEVERITY_LOW",
+		3: "SEVERITY_MEDIUM",
+		4: "SEVERITY_HIGH",
+		5: "SEVERITY_CRITICAL",
+	}
+	Severity_value = map[string]int32{
+		"SEVERITY_UNSPECIFIED": 0,
+		"SEVERITY_UNKNOWN":     1,
+		"SEVERITY_LOW":         2,
+		"SEVERITY_MEDIUM":      3,
+		"SEVERITY_HIGH":        4,
+		"SEVERITY_CRITICAL":    5,
+	}
+)
+
+func (x Severity) Enum() *Severity {
+	p := new(Severity)
+	*p = x
+	return p
+}
+
+func (x Severity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Severity) Descriptor() protoreflect.EnumDescriptor {
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[0].Descriptor()
+}
+
+func (Severity) Type() protoreflect.EnumType {
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[0]
+}
+
+func (x Severity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Severity.Descriptor instead.
+func (Severity) EnumDescriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{0}
+}
+
+// A Resource Sensitivity label.
+type Sensitivity int32
+
+const (
+	Sensitivity_SENSITIVITY_UNSPECIFIED Sensitivity = 0
+	// No label in the Agent Manifest applies to the resource.
+	Sensitivity_SENSITIVITY_UNKNOWN  Sensitivity = 1
+	Sensitivity_SENSITIVITY_LOW      Sensitivity = 2
+	Sensitivity_SENSITIVITY_MEDIUM   Sensitivity = 3
+	Sensitivity_SENSITIVITY_HIGH     Sensitivity = 4
+	Sensitivity_SENSITIVITY_CRITICAL Sensitivity = 5
+)
+
+// Enum value maps for Sensitivity.
+var (
+	Sensitivity_name = map[int32]string{
+		0: "SENSITIVITY_UNSPECIFIED",
+		1: "SENSITIVITY_UNKNOWN",
+		2: "SENSITIVITY_LOW",
+		3: "SENSITIVITY_MEDIUM",
+		4: "SENSITIVITY_HIGH",
+		5: "SENSITIVITY_CRITICAL",
+	}
+	Sensitivity_value = map[string]int32{
+		"SENSITIVITY_UNSPECIFIED": 0,
+		"SENSITIVITY_UNKNOWN":     1,
+		"SENSITIVITY_LOW":         2,
+		"SENSITIVITY_MEDIUM":      3,
+		"SENSITIVITY_HIGH":        4,
+		"SENSITIVITY_CRITICAL":    5,
+	}
+)
+
+func (x Sensitivity) Enum() *Sensitivity {
+	p := new(Sensitivity)
+	*p = x
+	return p
+}
+
+func (x Sensitivity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Sensitivity) Descriptor() protoreflect.EnumDescriptor {
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[1].Descriptor()
+}
+
+func (Sensitivity) Type() protoreflect.EnumType {
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[1]
+}
+
+func (x Sensitivity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Sensitivity.Descriptor instead.
+func (Sensitivity) EnumDescriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{1}
+}
 
 // How far to trust a link or a path.
 type Confidence int32
@@ -58,11 +182,11 @@ func (x Confidence) String() string {
 }
 
 func (Confidence) Descriptor() protoreflect.EnumDescriptor {
-	return file_agentguard_analysis_v1_analysis_proto_enumTypes[0].Descriptor()
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[2].Descriptor()
 }
 
 func (Confidence) Type() protoreflect.EnumType {
-	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[0]
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[2]
 }
 
 func (x Confidence) Number() protoreflect.EnumNumber {
@@ -71,7 +195,7 @@ func (x Confidence) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Confidence.Descriptor instead.
 func (Confidence) EnumDescriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{0}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{2}
 }
 
 // The kind of a link in a Reach Path.
@@ -122,11 +246,11 @@ func (x LinkKind) String() string {
 }
 
 func (LinkKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agentguard_analysis_v1_analysis_proto_enumTypes[1].Descriptor()
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[3].Descriptor()
 }
 
 func (LinkKind) Type() protoreflect.EnumType {
-	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[1]
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[3]
 }
 
 func (x LinkKind) Number() protoreflect.EnumNumber {
@@ -135,7 +259,7 @@ func (x LinkKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use LinkKind.Descriptor instead.
 func (LinkKind) EnumDescriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{1}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{3}
 }
 
 // Where an Identity Binding comes from.
@@ -179,11 +303,11 @@ func (x BindingOrigin) String() string {
 }
 
 func (BindingOrigin) Descriptor() protoreflect.EnumDescriptor {
-	return file_agentguard_analysis_v1_analysis_proto_enumTypes[2].Descriptor()
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[4].Descriptor()
 }
 
 func (BindingOrigin) Type() protoreflect.EnumType {
-	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[2]
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[4]
 }
 
 func (x BindingOrigin) Number() protoreflect.EnumNumber {
@@ -192,7 +316,7 @@ func (x BindingOrigin) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use BindingOrigin.Descriptor instead.
 func (BindingOrigin) EnumDescriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{2}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{4}
 }
 
 // The kind of a Secondary Finding.
@@ -242,11 +366,11 @@ func (x SecondaryFindingKind) String() string {
 }
 
 func (SecondaryFindingKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agentguard_analysis_v1_analysis_proto_enumTypes[3].Descriptor()
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[5].Descriptor()
 }
 
 func (SecondaryFindingKind) Type() protoreflect.EnumType {
-	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[3]
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[5]
 }
 
 func (x SecondaryFindingKind) Number() protoreflect.EnumNumber {
@@ -255,7 +379,7 @@ func (x SecondaryFindingKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SecondaryFindingKind.Descriptor instead.
 func (SecondaryFindingKind) EnumDescriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{3}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{5}
 }
 
 // The result of one analysis of an Agent Deployment.
@@ -268,8 +392,18 @@ type AnalysisResult struct {
 	// Single-layer issues found, in a deterministic order. They are reported
 	// whether or not a Reach Path exists.
 	SecondaryFindings []*SecondaryFinding `protobuf:"bytes,3,rep,name=secondary_findings,json=secondaryFindings,proto3" json:"secondary_findings,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// The exact Snapshots and Agent Manifest the result was computed from.
+	AnalysisInput *AnalysisInput `protobuf:"bytes,4,opt,name=analysis_input,json=analysisInput,proto3" json:"analysis_input,omitempty"`
+	// Version of the analysis rules (policy semantics, Identity Hop rules,
+	// confidence and severity rules) that produced the result. It changes
+	// whenever a rule change can change a result.
+	RulesVersion string `protobuf:"bytes,5,opt,name=rules_version,json=rulesVersion,proto3" json:"rules_version,omitempty"`
+	// Every Blind Spot of every Snapshot in the Analysis Input, in the order
+	// of the Environments in the manifest. None is hidden, whether or not a
+	// Reach Path passes through it.
+	BlindSpots    []*BlindSpot `protobuf:"bytes,6,rep,name=blind_spots,json=blindSpots,proto3" json:"blind_spots,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AnalysisResult) Reset() {
@@ -323,6 +457,275 @@ func (x *AnalysisResult) GetSecondaryFindings() []*SecondaryFinding {
 	return nil
 }
 
+func (x *AnalysisResult) GetAnalysisInput() *AnalysisInput {
+	if x != nil {
+		return x.AnalysisInput
+	}
+	return nil
+}
+
+func (x *AnalysisResult) GetRulesVersion() string {
+	if x != nil {
+		return x.RulesVersion
+	}
+	return ""
+}
+
+func (x *AnalysisResult) GetBlindSpots() []*BlindSpot {
+	if x != nil {
+		return x.BlindSpots
+	}
+	return nil
+}
+
+// The Analysis Input of one analysis: what makes the result reproducible.
+type AnalysisInput struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The schema version of the Agent Manifest, its "version" field.
+	ManifestVersion int32 `protobuf:"varint,1,opt,name=manifest_version,json=manifestVersion,proto3" json:"manifest_version,omitempty"`
+	// SHA-256 of the Agent Manifest's bytes, as "sha256:<hex>". It names the
+	// exact manifest, which its schema version alone does not.
+	ManifestDigest string `protobuf:"bytes,2,opt,name=manifest_digest,json=manifestDigest,proto3" json:"manifest_digest,omitempty"`
+	// The Snapshots used, one per Environment, in manifest order.
+	Snapshots []*SnapshotRef `protobuf:"bytes,3,rep,name=snapshots,proto3" json:"snapshots,omitempty"`
+	// The time Snapshot ages were measured against.
+	AnalyzedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=analyzed_at,json=analyzedAt,proto3" json:"analyzed_at,omitempty"`
+	// A Snapshot older than this is a Stale Snapshot.
+	StalenessThreshold *durationpb.Duration `protobuf:"bytes,5,opt,name=staleness_threshold,json=stalenessThreshold,proto3" json:"staleness_threshold,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AnalysisInput) Reset() {
+	*x = AnalysisInput{}
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AnalysisInput) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AnalysisInput) ProtoMessage() {}
+
+func (x *AnalysisInput) ProtoReflect() protoreflect.Message {
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AnalysisInput.ProtoReflect.Descriptor instead.
+func (*AnalysisInput) Descriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *AnalysisInput) GetManifestVersion() int32 {
+	if x != nil {
+		return x.ManifestVersion
+	}
+	return 0
+}
+
+func (x *AnalysisInput) GetManifestDigest() string {
+	if x != nil {
+		return x.ManifestDigest
+	}
+	return ""
+}
+
+func (x *AnalysisInput) GetSnapshots() []*SnapshotRef {
+	if x != nil {
+		return x.Snapshots
+	}
+	return nil
+}
+
+func (x *AnalysisInput) GetAnalyzedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AnalyzedAt
+	}
+	return nil
+}
+
+func (x *AnalysisInput) GetStalenessThreshold() *durationpb.Duration {
+	if x != nil {
+		return x.StalenessThreshold
+	}
+	return nil
+}
+
+// A Snapshot used in an Analysis Input.
+type SnapshotRef struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Name of the Environment in the Agent Manifest.
+	Environment string `protobuf:"bytes,1,opt,name=environment,proto3" json:"environment,omitempty"`
+	// The Snapshot's own ID.
+	SnapshotId string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	// The Snapshot file, relative to the manifest's folder.
+	Source string `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	// When the Snapshot was collected.
+	CollectedAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=collected_at,json=collectedAt,proto3" json:"collected_at,omitempty"`
+	// True when the Snapshot is older than the staleness threshold.
+	Stale         bool `protobuf:"varint,5,opt,name=stale,proto3" json:"stale,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SnapshotRef) Reset() {
+	*x = SnapshotRef{}
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SnapshotRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SnapshotRef) ProtoMessage() {}
+
+func (x *SnapshotRef) ProtoReflect() protoreflect.Message {
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SnapshotRef.ProtoReflect.Descriptor instead.
+func (*SnapshotRef) Descriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *SnapshotRef) GetEnvironment() string {
+	if x != nil {
+		return x.Environment
+	}
+	return ""
+}
+
+func (x *SnapshotRef) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+func (x *SnapshotRef) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *SnapshotRef) GetCollectedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CollectedAt
+	}
+	return nil
+}
+
+func (x *SnapshotRef) GetStale() bool {
+	if x != nil {
+		return x.Stale
+	}
+	return false
+}
+
+// A fact a Collector tried to gather but could not, as recorded in a
+// Snapshot.
+type BlindSpot struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Name of the Environment the Snapshot describes.
+	Environment string `protobuf:"bytes,1,opt,name=environment,proto3" json:"environment,omitempty"`
+	// ID of the Snapshot that records it.
+	SnapshotId string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
+	// What the Collector tried to gather.
+	Attempted string `protobuf:"bytes,3,opt,name=attempted,proto3" json:"attempted,omitempty"`
+	// Why it failed.
+	Reason string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	// Where the Snapshot records it.
+	Evidence      *Evidence `protobuf:"bytes,5,opt,name=evidence,proto3" json:"evidence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BlindSpot) Reset() {
+	*x = BlindSpot{}
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BlindSpot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BlindSpot) ProtoMessage() {}
+
+func (x *BlindSpot) ProtoReflect() protoreflect.Message {
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BlindSpot.ProtoReflect.Descriptor instead.
+func (*BlindSpot) Descriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *BlindSpot) GetEnvironment() string {
+	if x != nil {
+		return x.Environment
+	}
+	return ""
+}
+
+func (x *BlindSpot) GetSnapshotId() string {
+	if x != nil {
+		return x.SnapshotId
+	}
+	return ""
+}
+
+func (x *BlindSpot) GetAttempted() string {
+	if x != nil {
+		return x.Attempted
+	}
+	return ""
+}
+
+func (x *BlindSpot) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *BlindSpot) GetEvidence() *Evidence {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
 // An evidence-backed chain from an Agent Deployment through a Tool and an
 // Identity to a permission on a resource, ending in an Impact.
 type ReachPath struct {
@@ -331,15 +734,31 @@ type ReachPath struct {
 	AgentDeployment string `protobuf:"bytes,1,opt,name=agent_deployment,json=agentDeployment,proto3" json:"agent_deployment,omitempty"`
 	// The path's links, in order from the Tool to the Impact.
 	Links []*Link `protobuf:"bytes,2,rep,name=links,proto3" json:"links,omitempty"`
-	// How far to trust the path: the weakest confidence of its links.
-	Confidence    Confidence `protobuf:"varint,3,opt,name=confidence,proto3,enum=agentguard.analysis.v1.Confidence" json:"confidence,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// How far to trust the path: the weakest confidence of its links, lowered
+	// to reduced by any Blind Spot that affects it.
+	Confidence Confidence `protobuf:"varint,3,opt,name=confidence,proto3,enum=agentguard.analysis.v1.Confidence" json:"confidence,omitempty"`
+	// The identity of the path across analyses. It is derived only from the
+	// path's structure, never from evidence details, Snapshot IDs, or times.
+	Fingerprint string `protobuf:"bytes,4,opt,name=fingerprint,proto3" json:"fingerprint,omitempty"`
+	// Impact of the path's final link combined with the Resource Sensitivity
+	// of its resource.
+	Severity Severity `protobuf:"varint,5,opt,name=severity,proto3,enum=agentguard.analysis.v1.Severity" json:"severity,omitempty"`
+	// The Resource Sensitivity of the path's resource: the highest label whose
+	// pattern the resource can match, or unknown when none does.
+	ResourceSensitivity Sensitivity `protobuf:"varint,6,opt,name=resource_sensitivity,json=resourceSensitivity,proto3,enum=agentguard.analysis.v1.Sensitivity" json:"resource_sensitivity,omitempty"`
+	// The Blind Spots of the Snapshots the path draws on. Each lowers the
+	// path's confidence.
+	BlindSpots []*BlindSpot `protobuf:"bytes,7,rep,name=blind_spots,json=blindSpots,proto3" json:"blind_spots,omitempty"`
+	// Every reason the path's confidence is reduced: those of its links, then
+	// its Blind Spots. Empty when the confidence is high.
+	ConfidenceReasons []string `protobuf:"bytes,8,rep,name=confidence_reasons,json=confidenceReasons,proto3" json:"confidence_reasons,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *ReachPath) Reset() {
 	*x = ReachPath{}
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[1]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -351,7 +770,7 @@ func (x *ReachPath) String() string {
 func (*ReachPath) ProtoMessage() {}
 
 func (x *ReachPath) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[1]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -364,7 +783,7 @@ func (x *ReachPath) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReachPath.ProtoReflect.Descriptor instead.
 func (*ReachPath) Descriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{1}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ReachPath) GetAgentDeployment() string {
@@ -388,6 +807,41 @@ func (x *ReachPath) GetConfidence() Confidence {
 	return Confidence_CONFIDENCE_UNSPECIFIED
 }
 
+func (x *ReachPath) GetFingerprint() string {
+	if x != nil {
+		return x.Fingerprint
+	}
+	return ""
+}
+
+func (x *ReachPath) GetSeverity() Severity {
+	if x != nil {
+		return x.Severity
+	}
+	return Severity_SEVERITY_UNSPECIFIED
+}
+
+func (x *ReachPath) GetResourceSensitivity() Sensitivity {
+	if x != nil {
+		return x.ResourceSensitivity
+	}
+	return Sensitivity_SENSITIVITY_UNSPECIFIED
+}
+
+func (x *ReachPath) GetBlindSpots() []*BlindSpot {
+	if x != nil {
+		return x.BlindSpots
+	}
+	return nil
+}
+
+func (x *ReachPath) GetConfidenceReasons() []string {
+	if x != nil {
+		return x.ConfidenceReasons
+	}
+	return nil
+}
+
 // One link in a Reach Path.
 type Link struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -409,7 +863,7 @@ type Link struct {
 
 func (x *Link) Reset() {
 	*x = Link{}
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[2]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -421,7 +875,7 @@ func (x *Link) String() string {
 func (*Link) ProtoMessage() {}
 
 func (x *Link) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[2]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -434,7 +888,7 @@ func (x *Link) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Link.ProtoReflect.Descriptor instead.
 func (*Link) Descriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{2}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Link) GetKind() LinkKind {
@@ -492,7 +946,7 @@ type Evidence struct {
 
 func (x *Evidence) Reset() {
 	*x = Evidence{}
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[3]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -504,7 +958,7 @@ func (x *Evidence) String() string {
 func (*Evidence) ProtoMessage() {}
 
 func (x *Evidence) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[3]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -517,7 +971,7 @@ func (x *Evidence) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Evidence.ProtoReflect.Descriptor instead.
 func (*Evidence) Descriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{3}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Evidence) GetSource() string {
@@ -555,7 +1009,7 @@ type SecondaryFinding struct {
 
 func (x *SecondaryFinding) Reset() {
 	*x = SecondaryFinding{}
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[4]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -567,7 +1021,7 @@ func (x *SecondaryFinding) String() string {
 func (*SecondaryFinding) ProtoMessage() {}
 
 func (x *SecondaryFinding) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[4]
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -580,7 +1034,7 @@ func (x *SecondaryFinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SecondaryFinding.ProtoReflect.Descriptor instead.
 func (*SecondaryFinding) Descriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{4}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *SecondaryFinding) GetKind() SecondaryFindingKind {
@@ -629,18 +1083,49 @@ var File_agentguard_analysis_v1_analysis_proto protoreflect.FileDescriptor
 
 const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\n" +
-	"%agentguard/analysis/v1/analysis.proto\x12\x16agentguard.analysis.v1\"\xe3\x01\n" +
+	"%agentguard/analysis/v1/analysis.proto\x12\x16agentguard.analysis.v1\x1a\x1egoogle/protobuf/duration.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x9a\x03\n" +
 	"\x0eAnalysisResult\x12B\n" +
 	"\vreach_paths\x18\x01 \x03(\v2!.agentguard.analysis.v1.ReachPathR\n" +
 	"reachPaths\x124\n" +
 	"\x16impact_mapping_version\x18\x02 \x01(\tR\x14impactMappingVersion\x12W\n" +
-	"\x12secondary_findings\x18\x03 \x03(\v2(.agentguard.analysis.v1.SecondaryFindingR\x11secondaryFindings\"\xae\x01\n" +
+	"\x12secondary_findings\x18\x03 \x03(\v2(.agentguard.analysis.v1.SecondaryFindingR\x11secondaryFindings\x12L\n" +
+	"\x0eanalysis_input\x18\x04 \x01(\v2%.agentguard.analysis.v1.AnalysisInputR\ranalysisInput\x12#\n" +
+	"\rrules_version\x18\x05 \x01(\tR\frulesVersion\x12B\n" +
+	"\vblind_spots\x18\x06 \x03(\v2!.agentguard.analysis.v1.BlindSpotR\n" +
+	"blindSpots\"\xaf\x02\n" +
+	"\rAnalysisInput\x12)\n" +
+	"\x10manifest_version\x18\x01 \x01(\x05R\x0fmanifestVersion\x12'\n" +
+	"\x0fmanifest_digest\x18\x02 \x01(\tR\x0emanifestDigest\x12A\n" +
+	"\tsnapshots\x18\x03 \x03(\v2#.agentguard.analysis.v1.SnapshotRefR\tsnapshots\x12;\n" +
+	"\vanalyzed_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"analyzedAt\x12J\n" +
+	"\x13staleness_threshold\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\x12stalenessThreshold\"\xbd\x01\n" +
+	"\vSnapshotRef\x12 \n" +
+	"\venvironment\x18\x01 \x01(\tR\venvironment\x12\x1f\n" +
+	"\vsnapshot_id\x18\x02 \x01(\tR\n" +
+	"snapshotId\x12\x16\n" +
+	"\x06source\x18\x03 \x01(\tR\x06source\x12=\n" +
+	"\fcollected_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vcollectedAt\x12\x14\n" +
+	"\x05stale\x18\x05 \x01(\bR\x05stale\"\xc2\x01\n" +
+	"\tBlindSpot\x12 \n" +
+	"\venvironment\x18\x01 \x01(\tR\venvironment\x12\x1f\n" +
+	"\vsnapshot_id\x18\x02 \x01(\tR\n" +
+	"snapshotId\x12\x1c\n" +
+	"\tattempted\x18\x03 \x01(\tR\tattempted\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12<\n" +
+	"\bevidence\x18\x05 \x01(\v2 .agentguard.analysis.v1.EvidenceR\bevidence\"\xd9\x03\n" +
 	"\tReachPath\x12)\n" +
 	"\x10agent_deployment\x18\x01 \x01(\tR\x0fagentDeployment\x122\n" +
 	"\x05links\x18\x02 \x03(\v2\x1c.agentguard.analysis.v1.LinkR\x05links\x12B\n" +
 	"\n" +
 	"confidence\x18\x03 \x01(\x0e2\".agentguard.analysis.v1.ConfidenceR\n" +
-	"confidence\"\xc0\x02\n" +
+	"confidence\x12 \n" +
+	"\vfingerprint\x18\x04 \x01(\tR\vfingerprint\x12<\n" +
+	"\bseverity\x18\x05 \x01(\x0e2 .agentguard.analysis.v1.SeverityR\bseverity\x12V\n" +
+	"\x14resource_sensitivity\x18\x06 \x01(\x0e2#.agentguard.analysis.v1.SensitivityR\x13resourceSensitivity\x12B\n" +
+	"\vblind_spots\x18\a \x03(\v2!.agentguard.analysis.v1.BlindSpotR\n" +
+	"blindSpots\x12-\n" +
+	"\x12confidence_reasons\x18\b \x03(\tR\x11confidenceReasons\"\xc0\x02\n" +
 	"\x04Link\x124\n" +
 	"\x04kind\x18\x01 \x01(\x0e2 .agentguard.analysis.v1.LinkKindR\x04kind\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12<\n" +
@@ -661,7 +1146,21 @@ const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\n" +
 	"confidence\x18\x05 \x01(\x0e2\".agentguard.analysis.v1.ConfidenceR\n" +
 	"confidence\x12+\n" +
-	"\x11confidence_reason\x18\x06 \x01(\tR\x10confidenceReason*U\n" +
+	"\x11confidence_reason\x18\x06 \x01(\tR\x10confidenceReason*\x8b\x01\n" +
+	"\bSeverity\x12\x18\n" +
+	"\x14SEVERITY_UNSPECIFIED\x10\x00\x12\x14\n" +
+	"\x10SEVERITY_UNKNOWN\x10\x01\x12\x10\n" +
+	"\fSEVERITY_LOW\x10\x02\x12\x13\n" +
+	"\x0fSEVERITY_MEDIUM\x10\x03\x12\x11\n" +
+	"\rSEVERITY_HIGH\x10\x04\x12\x15\n" +
+	"\x11SEVERITY_CRITICAL\x10\x05*\xa0\x01\n" +
+	"\vSensitivity\x12\x1b\n" +
+	"\x17SENSITIVITY_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13SENSITIVITY_UNKNOWN\x10\x01\x12\x13\n" +
+	"\x0fSENSITIVITY_LOW\x10\x02\x12\x16\n" +
+	"\x12SENSITIVITY_MEDIUM\x10\x03\x12\x14\n" +
+	"\x10SENSITIVITY_HIGH\x10\x04\x12\x18\n" +
+	"\x14SENSITIVITY_CRITICAL\x10\x05*U\n" +
 	"\n" +
 	"Confidence\x12\x1a\n" +
 	"\x16CONFIDENCE_UNSPECIFIED\x10\x00\x12\x13\n" +
@@ -699,36 +1198,53 @@ func file_agentguard_analysis_v1_analysis_proto_rawDescGZIP() []byte {
 	return file_agentguard_analysis_v1_analysis_proto_rawDescData
 }
 
-var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_agentguard_analysis_v1_analysis_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_agentguard_analysis_v1_analysis_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_agentguard_analysis_v1_analysis_proto_goTypes = []any{
-	(Confidence)(0),           // 0: agentguard.analysis.v1.Confidence
-	(LinkKind)(0),             // 1: agentguard.analysis.v1.LinkKind
-	(BindingOrigin)(0),        // 2: agentguard.analysis.v1.BindingOrigin
-	(SecondaryFindingKind)(0), // 3: agentguard.analysis.v1.SecondaryFindingKind
-	(*AnalysisResult)(nil),    // 4: agentguard.analysis.v1.AnalysisResult
-	(*ReachPath)(nil),         // 5: agentguard.analysis.v1.ReachPath
-	(*Link)(nil),              // 6: agentguard.analysis.v1.Link
-	(*Evidence)(nil),          // 7: agentguard.analysis.v1.Evidence
-	(*SecondaryFinding)(nil),  // 8: agentguard.analysis.v1.SecondaryFinding
+	(Severity)(0),                 // 0: agentguard.analysis.v1.Severity
+	(Sensitivity)(0),              // 1: agentguard.analysis.v1.Sensitivity
+	(Confidence)(0),               // 2: agentguard.analysis.v1.Confidence
+	(LinkKind)(0),                 // 3: agentguard.analysis.v1.LinkKind
+	(BindingOrigin)(0),            // 4: agentguard.analysis.v1.BindingOrigin
+	(SecondaryFindingKind)(0),     // 5: agentguard.analysis.v1.SecondaryFindingKind
+	(*AnalysisResult)(nil),        // 6: agentguard.analysis.v1.AnalysisResult
+	(*AnalysisInput)(nil),         // 7: agentguard.analysis.v1.AnalysisInput
+	(*SnapshotRef)(nil),           // 8: agentguard.analysis.v1.SnapshotRef
+	(*BlindSpot)(nil),             // 9: agentguard.analysis.v1.BlindSpot
+	(*ReachPath)(nil),             // 10: agentguard.analysis.v1.ReachPath
+	(*Link)(nil),                  // 11: agentguard.analysis.v1.Link
+	(*Evidence)(nil),              // 12: agentguard.analysis.v1.Evidence
+	(*SecondaryFinding)(nil),      // 13: agentguard.analysis.v1.SecondaryFinding
+	(*timestamppb.Timestamp)(nil), // 14: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),   // 15: google.protobuf.Duration
 }
 var file_agentguard_analysis_v1_analysis_proto_depIdxs = []int32{
-	5,  // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
-	8,  // 1: agentguard.analysis.v1.AnalysisResult.secondary_findings:type_name -> agentguard.analysis.v1.SecondaryFinding
-	6,  // 2: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
-	0,  // 3: agentguard.analysis.v1.ReachPath.confidence:type_name -> agentguard.analysis.v1.Confidence
-	1,  // 4: agentguard.analysis.v1.Link.kind:type_name -> agentguard.analysis.v1.LinkKind
-	7,  // 5: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
-	0,  // 6: agentguard.analysis.v1.Link.confidence:type_name -> agentguard.analysis.v1.Confidence
-	2,  // 7: agentguard.analysis.v1.Link.origin:type_name -> agentguard.analysis.v1.BindingOrigin
-	3,  // 8: agentguard.analysis.v1.SecondaryFinding.kind:type_name -> agentguard.analysis.v1.SecondaryFindingKind
-	7,  // 9: agentguard.analysis.v1.SecondaryFinding.evidence:type_name -> agentguard.analysis.v1.Evidence
-	0,  // 10: agentguard.analysis.v1.SecondaryFinding.confidence:type_name -> agentguard.analysis.v1.Confidence
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	10, // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
+	13, // 1: agentguard.analysis.v1.AnalysisResult.secondary_findings:type_name -> agentguard.analysis.v1.SecondaryFinding
+	7,  // 2: agentguard.analysis.v1.AnalysisResult.analysis_input:type_name -> agentguard.analysis.v1.AnalysisInput
+	9,  // 3: agentguard.analysis.v1.AnalysisResult.blind_spots:type_name -> agentguard.analysis.v1.BlindSpot
+	8,  // 4: agentguard.analysis.v1.AnalysisInput.snapshots:type_name -> agentguard.analysis.v1.SnapshotRef
+	14, // 5: agentguard.analysis.v1.AnalysisInput.analyzed_at:type_name -> google.protobuf.Timestamp
+	15, // 6: agentguard.analysis.v1.AnalysisInput.staleness_threshold:type_name -> google.protobuf.Duration
+	14, // 7: agentguard.analysis.v1.SnapshotRef.collected_at:type_name -> google.protobuf.Timestamp
+	12, // 8: agentguard.analysis.v1.BlindSpot.evidence:type_name -> agentguard.analysis.v1.Evidence
+	11, // 9: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
+	2,  // 10: agentguard.analysis.v1.ReachPath.confidence:type_name -> agentguard.analysis.v1.Confidence
+	0,  // 11: agentguard.analysis.v1.ReachPath.severity:type_name -> agentguard.analysis.v1.Severity
+	1,  // 12: agentguard.analysis.v1.ReachPath.resource_sensitivity:type_name -> agentguard.analysis.v1.Sensitivity
+	9,  // 13: agentguard.analysis.v1.ReachPath.blind_spots:type_name -> agentguard.analysis.v1.BlindSpot
+	3,  // 14: agentguard.analysis.v1.Link.kind:type_name -> agentguard.analysis.v1.LinkKind
+	12, // 15: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
+	2,  // 16: agentguard.analysis.v1.Link.confidence:type_name -> agentguard.analysis.v1.Confidence
+	4,  // 17: agentguard.analysis.v1.Link.origin:type_name -> agentguard.analysis.v1.BindingOrigin
+	5,  // 18: agentguard.analysis.v1.SecondaryFinding.kind:type_name -> agentguard.analysis.v1.SecondaryFindingKind
+	12, // 19: agentguard.analysis.v1.SecondaryFinding.evidence:type_name -> agentguard.analysis.v1.Evidence
+	2,  // 20: agentguard.analysis.v1.SecondaryFinding.confidence:type_name -> agentguard.analysis.v1.Confidence
+	21, // [21:21] is the sub-list for method output_type
+	21, // [21:21] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_agentguard_analysis_v1_analysis_proto_init() }
@@ -741,8 +1257,8 @@ func file_agentguard_analysis_v1_analysis_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentguard_analysis_v1_analysis_proto_rawDesc), len(file_agentguard_analysis_v1_analysis_proto_rawDesc)),
-			NumEnums:      4,
-			NumMessages:   5,
+			NumEnums:      6,
+			NumMessages:   8,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -32,6 +32,10 @@ type step struct {
 	// identity is the AWS Identity the hop arrives at. It is nil when the
 	// hop arrives at root on the host.
 	identity *awsIdentity
+	// how and to describe the hop and the Identity it arrives at by their
+	// structure alone, for the Reach Path Fingerprint: no evidence location,
+	// Snapshot ID, or time.
+	how, to string
 }
 
 // findChains searches for the Identity Hop chains that lead away from the
@@ -67,6 +71,8 @@ func (h *linuxHost) findChains(identities []*awsIdentity) error {
 				fmt.Sprintf("member of the docker group (gid %d), which can run containers as root on the host", group.GetGid()),
 				h.source, location),
 			toLink: root,
+			how:    "docker-group",
+			to:     "root@" + h.identityKey,
 		}})
 	}
 
@@ -110,6 +116,8 @@ func credentialHops(host *linuxHost, user *snapshotv1.LinuxUser, identities []*a
 						host.source, fmt.Sprintf("$.linux.credentialFiles[%d].awsProfiles[%d]", i, j)),
 					toLink:   ident.link,
 					identity: ident,
+					how:      "credential-file:" + file.GetPath() + "#" + profile.GetName(),
+					to:       ident.identity.GetArn(),
 				}})
 			}
 		}

@@ -30,6 +30,11 @@ var update = flag.Bool("update", false, "rewrite the expected output of every fi
 
 const fixturesDir = "../../testdata/fixtures"
 
+// fixtureNow is the time the fixtures are analyzed at, so the age of their
+// Snapshots, and so the result, never depends on the real clock. It is a
+// couple of hours after the fixtures' Snapshots were collected.
+const fixtureNow = "2026-11-17T12:00:00Z"
+
 var binary string
 
 func TestMain(m *testing.M) {
@@ -69,7 +74,7 @@ func TestAnalyzeFixtures(t *testing.T) {
 			expectedError := filepath.Join(fixture, "expected-error.txt")
 
 			var stdout, stderr bytes.Buffer
-			cmd := exec.Command(binary, "analyze", filepath.Join(fixture, "input"))
+			cmd := exec.Command(binary, "analyze", "--now", fixtureNow, filepath.Join(fixture, "input"))
 			cmd.Stdout = &stdout
 			cmd.Stderr = &stderr
 			runErr := cmd.Run()

@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	analysisv1 "github.com/imRYiUK/agentguard/proto/gen/go/agentguard/analysis/v1"
 	snapshotv1 "github.com/imRYiUK/agentguard/proto/gen/go/agentguard/snapshot/v1"
@@ -36,12 +37,28 @@ const ManifestFile = "agentguard.yaml"
 // its slash-separated path in the tree.
 type Input struct {
 	Files fs.FS
+	// Now is the time Snapshot ages are measured against. The zero value
+	// means the current time. Fixing it makes a result reproducible.
+	Now time.Time
+	// StalenessThreshold is the age past which a Snapshot is a Stale
+	// Snapshot. The zero value means DefaultStalenessThreshold.
+	StalenessThreshold time.Duration
 }
 
 // Analyze returns the Reach Paths found in the Analysis Input. The same
-// input always gives the same result.
+// input, with the same Now and StalenessThreshold, always gives the same
+// result.
 func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
-	m, err := readManifest(in.Files)
+	if in.Now.IsZero() {
+		in.Now = time.Now()
+	}
+	if in.StalenessThreshold < 0 {
+		return nil, fmt.Errorf("the staleness threshold must be positive, got %s", in.StalenessThreshold)
+	}
+	if in.StalenessThreshold == 0 {
+		in.StalenessThreshold = DefaultStalenessThreshold
+	}
+	m, manifestBytes, err := readManifest(in.Files)
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +82,22 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	linux, aws, err := readSnapshots(in.Files, m.Environments)
+	linux, aws, snaps, err := readSnapshots(in.Files, m.Environments)
 	if err != nil {
 		return nil, err
 	}
 
 	budget := awspolicy.NewBudget(limits.MaxPolicyEvalSteps)
+	markStale(snaps, in.Now, in.StalenessThreshold)
 	result := &analysisv1.AnalysisResult{
 		ImpactMappingVersion: impacts.Version,
+		RulesVersion:         RulesVersion,
+		AnalysisInput:        analysisInput(in, m, manifestBytes, snaps),
 		SecondaryFindings:    secondaryFindings(m.Agent.Name, tools, filesystem, aws),
 	}
+	pathAt := map[string]int{} // Reach Path Fingerprint to its index in result.ReachPaths
+	sc := newScorer(snaps, in.StalenessThreshold, m.ResourceSensitivities)
+	result.BlindSpots = sc.blindSpots()
 	for _, host := range linux {
 		if err := host.findChains(aws); err != nil {
 			return nil, err
@@ -101,11 +124,28 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 						links = append(links, h.Via.link, h.Via.toLink)
 					}
 					links = append(links, perm.link, perm.impact)
-					result.ReachPaths = append(result.ReachPaths, &analysisv1.ReachPath{
-						AgentDeployment: m.Agent.Name,
-						Links:           links,
-						Confidence:      weakest(links),
-					})
+					structure := []string{"deployment", m.Agent.Name, "tool", "mcp-shell:" + tool.Server,
+						"identity", "linux:" + host.identityKey + ":" + host.payload.GetAgentUser().GetName()}
+					for _, h := range chain {
+						structure = append(structure, "hop", h.Via.how, "identity", h.Via.to)
+					}
+					structure = append(structure, "permission", perm.action, "resource", perm.onResource, "impact", perm.impactName)
+					p, err := sc.path(m.Agent.Name, structure, links, perm)
+					if err != nil {
+						return nil, err
+					}
+					// Two statements can grant the same Native Permission. They
+					// are one finding with one fingerprint, and the more
+					// certain grant is kept.
+					if at, dup := pathAt[p.Fingerprint]; dup {
+						if result.ReachPaths[at].Confidence == analysisv1.Confidence_CONFIDENCE_REDUCED &&
+							p.Confidence == analysisv1.Confidence_CONFIDENCE_HIGH {
+							result.ReachPaths[at] = p
+						}
+						continue
+					}
+					pathAt[p.Fingerprint] = len(result.ReachPaths)
+					result.ReachPaths = append(result.ReachPaths, p)
 				}
 			}
 		}
@@ -113,28 +153,18 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 	return result, nil
 }
 
-// weakest returns the lowest confidence among links, which is the confidence
-// of the path they form.
-func weakest(links []*analysisv1.Link) analysisv1.Confidence {
-	out := analysisv1.Confidence_CONFIDENCE_HIGH
-	for _, l := range links {
-		if l.GetConfidence() == analysisv1.Confidence_CONFIDENCE_REDUCED {
-			out = analysisv1.Confidence_CONFIDENCE_REDUCED
-		}
-	}
-	return out
-}
-
-func readManifest(files fs.FS) (*manifest.Manifest, error) {
+// readManifest returns the parsed Agent Manifest and the bytes it was parsed
+// from.
+func readManifest(files fs.FS) (*manifest.Manifest, []byte, error) {
 	content, err := limits.ReadFile(files, ManifestFile, limits.MaxConfigBytes)
 	if err != nil {
-		return nil, fmt.Errorf("reading the Agent Manifest: %w", err)
+		return nil, nil, fmt.Errorf("reading the Agent Manifest: %w", err)
 	}
 	m, err := manifest.Parse(ManifestFile, content)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return m, nil
+	return m, content, nil
 }
 
 // inputFile is one input file and the name it is reported under in evidence.
@@ -188,6 +218,10 @@ type linuxHost struct {
 	// environment is the name of the Environment in the manifest.
 	environment string
 	source      string
+	// identityKey is the host's provider-native identity, which the manifest
+	// and the Snapshot agree on: its machine ID, or else its SSH host key
+	// fingerprint. The Environment's name is only a label.
+	identityKey string
 	payload     *snapshotv1.LinuxPayload
 	userLink    *analysisv1.Link
 	// agentHops are the credential-file hops the agent user can take
@@ -222,33 +256,55 @@ type awsIdentity struct {
 type permission struct {
 	link   *analysisv1.Link
 	impact *analysisv1.Link
+	// resource is the resource pattern the permission is on, and impactName
+	// the Impact attached to it, for severity and the Reach Path
+	// Fingerprint.
+	resource   string
+	impactName string
+	// action and onResource state the Native Permission as the policy does,
+	// for the Reach Path Fingerprint.
+	action, onResource string
 }
 
 // readSnapshots reads the Snapshot of each Environment in the manifest, and
 // rejects any that does not match the Environment identity the manifest
 // expects.
-func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*awsIdentity, error) {
+func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*awsIdentity, []*snapshotInfo, error) {
 	var hosts []*linuxHost
 	var identities []*awsIdentity
+	var infos []*snapshotInfo
 	for _, env := range envs {
 		content, err := limits.ReadFile(files, env.Snapshot, limits.MaxSnapshotBytes)
 		if err != nil {
-			return nil, nil, fmt.Errorf("environments[%d].snapshot: %w", env.Index, err)
+			return nil, nil, nil, fmt.Errorf("environments[%d].snapshot: %w", env.Index, err)
 		}
 		source := env.Snapshot
 		snap, err := snapshot.Parse(source, content)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if err := checkEnvironmentIdentity(source, env, snap); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
+		infos = append(infos, &snapshotInfo{
+			environment: env.Name,
+			source:      source,
+			id:          snap.GetSnapshotId(),
+			collectedAt: snap.GetCollectedAt().AsTime(),
+			blindSpots:  snap.GetBlindSpots(),
+		})
 		switch p := snap.Payload.(type) {
 		case *snapshotv1.Snapshot_Linux:
 			user := p.Linux.GetAgentUser()
+			id := snap.GetEnvironment().GetLinux()
+			key := id.GetMachineId()
+			if key == "" {
+				key = id.GetSshHostKeyFingerprint()
+			}
 			hosts = append(hosts, &linuxHost{
 				environment: env.Name,
 				source:      source,
+				identityKey: key,
 				payload:     p.Linux,
 				userLink: bindingLink(analysisv1.BindingOrigin_BINDING_ORIGIN_DISCOVERED,
 					fmt.Sprintf("Linux user %s (uid %d)", user.GetName(), user.GetUid()),
@@ -258,13 +314,13 @@ func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*a
 			for i, id := range p.Aws.GetIdentities() {
 				ident, err := readAWSIdentity(env.Name, source, fmt.Sprintf("$.aws.identities[%d]", i), id)
 				if err != nil {
-					return nil, nil, err
+					return nil, nil, nil, err
 				}
 				identities = append(identities, ident)
 			}
 		}
 	}
-	return hosts, identities, nil
+	return hosts, identities, infos, nil
 }
 
 func readAWSIdentity(environment, source, location string, id *snapshotv1.AwsIdentity) (*awsIdentity, error) {
@@ -361,15 +417,23 @@ func (a *awsIdentity) permissions(impacts *impact.Table, budget *awspolicy.Budge
 		fs := foundFor[permissionKey{g.Statement, g.Action, g.Resource}]
 		if len(fs) == 0 {
 			a.perms = append(a.perms, permission{
-				link:   a.permissionLink(g),
-				impact: link(analysisv1.LinkKind_LINK_KIND_IMPACT, impact.Unknown, impacts.Source(), impact.NoMappingLocation),
+				link:       a.permissionLink(g),
+				impact:     link(analysisv1.LinkKind_LINK_KIND_IMPACT, impact.Unknown, impacts.Source(), impact.NoMappingLocation),
+				resource:   grantResourcePattern(g),
+				impactName: impact.Unknown,
+				action:     grantActionKey(g),
+				onResource: grantResourceKey(g),
 			})
 			continue
 		}
 		for _, f := range fs {
 			a.perms = append(a.perms, permission{
-				link:   a.permissionLink(f.grant),
-				impact: link(analysisv1.LinkKind_LINK_KIND_IMPACT, f.impact, impacts.Source(), impacts.Location(f.mapping)),
+				link:       a.permissionLink(f.grant),
+				impact:     link(analysisv1.LinkKind_LINK_KIND_IMPACT, f.impact, impacts.Source(), impacts.Location(f.mapping)),
+				resource:   grantResourcePattern(f.grant),
+				impactName: f.impact,
+				action:     grantActionKey(f.grant),
+				onResource: grantResourceKey(f.grant),
 			})
 		}
 	}
@@ -401,6 +465,39 @@ func grantAction(g awspolicy.Grant) string {
 		return "all actions except " + strings.Join(g.Statement.NotActions, ", ")
 	}
 	return g.Action
+}
+
+// grantActionKey is grantAction with the NotAction entries sorted, so the
+// order a policy lists them in does not change the Reach Path Fingerprint.
+func grantActionKey(g awspolicy.Grant) string {
+	if len(g.Statement.NotActions) > 0 {
+		return "all actions except " + strings.Join(sorted(g.Statement.NotActions), ", ")
+	}
+	return g.Action
+}
+
+// grantResourceKey is grantResource with the NotResource entries sorted.
+func grantResourceKey(g awspolicy.Grant) string {
+	if len(g.Statement.NotResources) > 0 {
+		return "all resources except " + strings.Join(sorted(g.Statement.NotResources), ", ")
+	}
+	return g.Resource
+}
+
+func sorted(list []string) []string {
+	out := slices.Clone(list)
+	slices.Sort(out)
+	return out
+}
+
+// grantResourcePattern is the resource pattern a Grant is on. A NotResource
+// grant reaches every resource but the ones it lists, so it is "*": reaching
+// too much is the safe error.
+func grantResourcePattern(g awspolicy.Grant) string {
+	if g.Resource == "" {
+		return "*"
+	}
+	return g.Resource
 }
 
 // grantResource describes the resources a Grant allows, as the policy states

@@ -60,7 +60,36 @@
           "confidence": "CONFIDENCE_HIGH"
         }
       ],
-      "confidence": "CONFIDENCE_HIGH"
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:25ea77b78dd3967cd4c0ce716f3771c493bbb9ba91554729b3e9dd0ff7a5bfd9",
+      "severity": "SEVERITY_MEDIUM",
+      "resourceSensitivity": "SENSITIVITY_CRITICAL",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
     },
     {
       "agentDeployment": "deploy-agent",
@@ -122,7 +151,36 @@
           "confidence": "CONFIDENCE_HIGH"
         }
       ],
-      "confidence": "CONFIDENCE_HIGH"
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:f5963c8401ad1472ffe1f44dfff57d1e9fa96025cb90a15a9f14f70f4ebe3827",
+      "severity": "SEVERITY_HIGH",
+      "resourceSensitivity": "SENSITIVITY_CRITICAL",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
     },
     {
       "agentDeployment": "deploy-agent",
@@ -184,7 +242,36 @@
           "confidence": "CONFIDENCE_HIGH"
         }
       ],
-      "confidence": "CONFIDENCE_HIGH"
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:de59b3fa98e1ce351819c1216f92ad56810d50140ede20c6e4cc6413e0462671",
+      "severity": "SEVERITY_CRITICAL",
+      "resourceSensitivity": "SENSITIVITY_CRITICAL",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
     },
     {
       "agentDeployment": "deploy-agent",
@@ -246,7 +333,36 @@
           "confidence": "CONFIDENCE_HIGH"
         }
       ],
-      "confidence": "CONFIDENCE_HIGH"
+      "confidence": "CONFIDENCE_REDUCED",
+      "fingerprint": "rpf1:e524ffd14b2e3e19d17d102e0d99d84703f1bd6c286e796d5b07156e971c55ab",
+      "severity": "SEVERITY_CRITICAL",
+      "resourceSensitivity": "SENSITIVITY_CRITICAL",
+      "blindSpots": [
+        {
+          "environment": "build-host",
+          "snapshotId": "snap-linux-0001",
+          "attempted": "read /etc/sudoers",
+          "reason": "permission denied",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.blindSpots[0]"
+          }
+        },
+        {
+          "environment": "prod-aws",
+          "snapshotId": "snap-aws-0001",
+          "attempted": "organizations:ListPolicies (SCPs)",
+          "reason": "not collected",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.blindSpots[0]"
+          }
+        }
+      ],
+      "confidenceReasons": [
+        "Blind Spot in Environment build-host: the Collector could not complete \"read /etc/sudoers\" (permission denied)",
+        "Blind Spot in Environment prod-aws: the Collector could not complete \"organizations:ListPolicies (SCPs)\" (not collected)"
+      ]
     }
   ],
   "impactMappingVersion": "2",
@@ -270,6 +386,49 @@
         "location": "$.aws.identities[0].policies[0].document.Statement[0]"
       },
       "confidence": "CONFIDENCE_HIGH"
+    }
+  ],
+  "analysisInput": {
+    "manifestVersion": 1,
+    "manifestDigest": "sha256:81e90628222172c00b1bc7f5b7e857a8323496c76a8f5e120c040563b3b90661",
+    "snapshots": [
+      {
+        "environment": "build-host",
+        "snapshotId": "snap-linux-0001",
+        "source": "snapshots/linux.json",
+        "collectedAt": "2026-11-17T10:00:00Z"
+      },
+      {
+        "environment": "prod-aws",
+        "snapshotId": "snap-aws-0001",
+        "source": "snapshots/aws.json",
+        "collectedAt": "2026-11-17T10:05:00Z"
+      }
+    ],
+    "analyzedAt": "2026-11-17T12:00:00Z",
+    "stalenessThreshold": "604800s"
+  },
+  "rulesVersion": "1",
+  "blindSpots": [
+    {
+      "environment": "build-host",
+      "snapshotId": "snap-linux-0001",
+      "attempted": "read /etc/sudoers",
+      "reason": "permission denied",
+      "evidence": {
+        "source": "snapshots/linux.json",
+        "location": "$.blindSpots[0]"
+      }
+    },
+    {
+      "environment": "prod-aws",
+      "snapshotId": "snap-aws-0001",
+      "attempted": "organizations:ListPolicies (SCPs)",
+      "reason": "not collected",
+      "evidence": {
+        "source": "snapshots/aws.json",
+        "location": "$.blindSpots[0]"
+      }
     }
   ]
 }
