@@ -55,7 +55,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        module: [proto, core, cli]
+        module: [proto, collector, core, cli]
     defaults:
       run:
         working-directory: ${{ matrix.module }}

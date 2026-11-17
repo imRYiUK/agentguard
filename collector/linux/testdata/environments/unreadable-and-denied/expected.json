@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-test-0001",
+  "collectorVersion": "0.0.0-test",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "collectedBy": "deploy",
+  "environment": {
+    "linux": {
+      "machineId": "e8c913f01b6f9ef3d7f19c3cef1cc390",
+      "sshHostKeyFingerprint": "SHA256:5JlXq0rbIa+l50PPIotxrfxxiZTqQrQRrHry3vahInI"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "read /home/ops/.aws/credentials",
+      "reason": "permission denied"
+    },
+    {
+      "attempted": "read /root/.aws/credentials",
+      "reason": "permission denied"
+    },
+    {
+      "attempted": "stat /var/run/docker.sock",
+      "reason": "permission denied"
+    }
+  ],
+  "linux": {
+    "agentUser": {
+      "name": "deploy",
+      "uid": 1001,
+      "groups": [
+        {
+          "name": "deploy",
+          "gid": 1001
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-test-0001",
+  "collectorVersion": "0.0.0-test",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "collectedBy": "deploy",
+  "environment": {
+    "linux": {
+      "machineId": "e8c913f01b6f9ef3d7f19c3cef1cc390",
+      "sshHostKeyFingerprint": "SHA256:5JlXq0rbIa+l50PPIotxrfxxiZTqQrQRrHry3vahInI"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "read /root/.aws/credentials",
+      "reason": "permission denied"
+    }
+  ],
+  "linux": {
+    "agentUser": {
+      "name": "deploy",
+      "uid": 1001,
+      "groups": [
+        {
+          "name": "deploy",
+          "gid": 1001
+        },
+        {
+          "name": "docker",
+          "gid": 998
+        },
+        {
+          "name": "aws-users",
+          "gid": 2001
+        }
+      ]
+    },
+    "credentialFiles": [
+      {
+        "path": "/home/deploy/.aws/credentials",
+        "kind": "CREDENTIAL_KIND_AWS_SHARED_CREDENTIALS",
+        "ownerUid": 1001,
+        "groupGid": 1001,
+        "mode": "0600",
+        "fingerprint": "sha256:c8e33072f5cdcdaa76a6cf9927f072f68a86564abbd40e58f6f7a654f0d21845",
+        "awsProfiles": [
+          {
+            "name": "default",
+            "accessKeyIdFingerprint": "sha256:1a5d44a2dca19669d72edf4c4f1c27c4c1ca4b4408fbb17f6ce4ad452d78ddb3"
+          },
+          {
+            "name": "staging",
+            "accessKeyIdFingerprint": "sha256:c6ea27c534f993d31f0aef882e3d200e7b87470c379ae79c8f9b19d3bd363dc9"
+          }
+        ]
+      },
+      {
+        "path": "/home/ops/.aws/credentials",
+        "kind": "CREDENTIAL_KIND_AWS_SHARED_CREDENTIALS",
+        "ownerUid": 1002,
+        "groupGid": 2001,
+        "mode": "0640",
+        "fingerprint": "sha256:537261f50602fc2eeffc5db6d05417e1825916df0d4c377cff92f6392620467c",
+        "awsProfiles": [
+          {
+            "name": "ops",
+            "accessKeyIdFingerprint": "sha256:a8d99d42d4930564b5c58091eb2a3164e7c42f817dd43abf9e68ce95e80cbb9c"
+          }
+        ]
+      }
+    ],
+    "dockerSocket": {
+      "path": "/var/run/docker.sock",
+      "groupGid": 998,
+      "mode": "0660"
+    }
+  }
+}

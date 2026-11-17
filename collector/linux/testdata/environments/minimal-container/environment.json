@@ -1,0 +1,23 @@
+{
+  "process": {
+    "uid": 0,
+    "gid": 0
+  },
+  "entries": {
+    "/var/lib/dbus/machine-id": {
+      "lines": [
+        "0123456789abcdef0123456789abcdef"
+      ]
+    },
+    "/etc/passwd": {
+      "lines": [
+        "root:x:0:0:root:/root:/bin/sh"
+      ]
+    },
+    "/etc/group": {
+      "lines": [
+        "root:x:0:"
+      ]
+    }
+  }
+}

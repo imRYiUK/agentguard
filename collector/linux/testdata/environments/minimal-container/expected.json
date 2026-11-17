@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-test-0001",
+  "collectorVersion": "0.0.0-test",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "collectedBy": "root",
+  "environment": {
+    "linux": {
+      "machineId": "0123456789abcdef0123456789abcdef"
+    }
+  },
+  "linux": {
+    "agentUser": {
+      "name": "root",
+      "groups": [
+        {
+          "name": "root"
+        }
+      ]
+    }
+  }
+}

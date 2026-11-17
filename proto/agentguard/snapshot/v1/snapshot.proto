@@ -70,6 +70,9 @@ message LinuxPayload {
   LinuxUser agent_user = 1;
   // Credential files found on the host.
   repeated CredentialFile credential_files = 2;
+  // The Docker daemon's socket, when the host has one. Whoever can write to
+  // it can run containers as root on the host.
+  DockerSocket docker_socket = 3;
 }
 
 // A Linux user and its group memberships.
@@ -83,6 +86,19 @@ message LinuxUser {
 message LinuxGroup {
   string name = 1;
   uint32 gid = 2;
+}
+
+// The Docker daemon's socket, recorded by its location, owner, and
+// permissions only. The Collector never connects to it.
+message DockerSocket {
+  // Absolute path of the socket, for example "/var/run/docker.sock".
+  string path = 1;
+  // UID of the socket's owner.
+  uint32 owner_uid = 2;
+  // GID of the socket's group.
+  uint32 group_gid = 3;
+  // Permission bits in octal, for example "0660".
+  string mode = 4;
 }
 
 // The kind of a credential file.

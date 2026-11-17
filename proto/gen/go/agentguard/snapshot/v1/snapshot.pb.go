@@ -522,8 +522,11 @@ type LinuxPayload struct {
 	AgentUser *LinuxUser `protobuf:"bytes,1,opt,name=agent_user,json=agentUser,proto3" json:"agent_user,omitempty"`
 	// Credential files found on the host.
 	CredentialFiles []*CredentialFile `protobuf:"bytes,2,rep,name=credential_files,json=credentialFiles,proto3" json:"credential_files,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The Docker daemon's socket, when the host has one. Whoever can write to
+	// it can run containers as root on the host.
+	DockerSocket  *DockerSocket `protobuf:"bytes,3,opt,name=docker_socket,json=dockerSocket,proto3" json:"docker_socket,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LinuxPayload) Reset() {
@@ -566,6 +569,13 @@ func (x *LinuxPayload) GetAgentUser() *LinuxUser {
 func (x *LinuxPayload) GetCredentialFiles() []*CredentialFile {
 	if x != nil {
 		return x.CredentialFiles
+	}
+	return nil
+}
+
+func (x *LinuxPayload) GetDockerSocket() *DockerSocket {
+	if x != nil {
+		return x.DockerSocket
 	}
 	return nil
 }
@@ -684,6 +694,80 @@ func (x *LinuxGroup) GetGid() uint32 {
 	return 0
 }
 
+// The Docker daemon's socket, recorded by its location, owner, and
+// permissions only. The Collector never connects to it.
+type DockerSocket struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Absolute path of the socket, for example "/var/run/docker.sock".
+	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	// UID of the socket's owner.
+	OwnerUid uint32 `protobuf:"varint,2,opt,name=owner_uid,json=ownerUid,proto3" json:"owner_uid,omitempty"`
+	// GID of the socket's group.
+	GroupGid uint32 `protobuf:"varint,3,opt,name=group_gid,json=groupGid,proto3" json:"group_gid,omitempty"`
+	// Permission bits in octal, for example "0660".
+	Mode          string `protobuf:"bytes,4,opt,name=mode,proto3" json:"mode,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DockerSocket) Reset() {
+	*x = DockerSocket{}
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DockerSocket) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DockerSocket) ProtoMessage() {}
+
+func (x *DockerSocket) ProtoReflect() protoreflect.Message {
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DockerSocket.ProtoReflect.Descriptor instead.
+func (*DockerSocket) Descriptor() ([]byte, []int) {
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *DockerSocket) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *DockerSocket) GetOwnerUid() uint32 {
+	if x != nil {
+		return x.OwnerUid
+	}
+	return 0
+}
+
+func (x *DockerSocket) GetGroupGid() uint32 {
+	if x != nil {
+		return x.GroupGid
+	}
+	return 0
+}
+
+func (x *DockerSocket) GetMode() string {
+	if x != nil {
+		return x.Mode
+	}
+	return ""
+}
+
 // A file holding credentials, recorded without its contents.
 type CredentialFile struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -706,7 +790,7 @@ type CredentialFile struct {
 
 func (x *CredentialFile) Reset() {
 	*x = CredentialFile{}
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[8]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -718,7 +802,7 @@ func (x *CredentialFile) String() string {
 func (*CredentialFile) ProtoMessage() {}
 
 func (x *CredentialFile) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[8]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -731,7 +815,7 @@ func (x *CredentialFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CredentialFile.ProtoReflect.Descriptor instead.
 func (*CredentialFile) Descriptor() ([]byte, []int) {
-	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{8}
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CredentialFile) GetPath() string {
@@ -797,7 +881,7 @@ type AwsCredentialProfile struct {
 
 func (x *AwsCredentialProfile) Reset() {
 	*x = AwsCredentialProfile{}
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[9]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -809,7 +893,7 @@ func (x *AwsCredentialProfile) String() string {
 func (*AwsCredentialProfile) ProtoMessage() {}
 
 func (x *AwsCredentialProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[9]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -822,7 +906,7 @@ func (x *AwsCredentialProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AwsCredentialProfile.ProtoReflect.Descriptor instead.
 func (*AwsCredentialProfile) Descriptor() ([]byte, []int) {
-	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{9}
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AwsCredentialProfile) GetName() string {
@@ -850,7 +934,7 @@ type AwsPayload struct {
 
 func (x *AwsPayload) Reset() {
 	*x = AwsPayload{}
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[10]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -862,7 +946,7 @@ func (x *AwsPayload) String() string {
 func (*AwsPayload) ProtoMessage() {}
 
 func (x *AwsPayload) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[10]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +959,7 @@ func (x *AwsPayload) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AwsPayload.ProtoReflect.Descriptor instead.
 func (*AwsPayload) Descriptor() ([]byte, []int) {
-	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{10}
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AwsPayload) GetIdentities() []*AwsIdentity {
@@ -905,7 +989,7 @@ type AwsIdentity struct {
 
 func (x *AwsIdentity) Reset() {
 	*x = AwsIdentity{}
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[11]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -917,7 +1001,7 @@ func (x *AwsIdentity) String() string {
 func (*AwsIdentity) ProtoMessage() {}
 
 func (x *AwsIdentity) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[11]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -930,7 +1014,7 @@ func (x *AwsIdentity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AwsIdentity.ProtoReflect.Descriptor instead.
 func (*AwsIdentity) Descriptor() ([]byte, []int) {
-	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{11}
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *AwsIdentity) GetArn() string {
@@ -976,7 +1060,7 @@ type AwsGroup struct {
 
 func (x *AwsGroup) Reset() {
 	*x = AwsGroup{}
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -988,7 +1072,7 @@ func (x *AwsGroup) String() string {
 func (*AwsGroup) ProtoMessage() {}
 
 func (x *AwsGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1001,7 +1085,7 @@ func (x *AwsGroup) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AwsGroup.ProtoReflect.Descriptor instead.
 func (*AwsGroup) Descriptor() ([]byte, []int) {
-	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{12}
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AwsGroup) GetArn() string {
@@ -1042,7 +1126,7 @@ type AwsPolicy struct {
 
 func (x *AwsPolicy) Reset() {
 	*x = AwsPolicy{}
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[13]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1054,7 +1138,7 @@ func (x *AwsPolicy) String() string {
 func (*AwsPolicy) ProtoMessage() {}
 
 func (x *AwsPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[13]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1067,7 +1151,7 @@ func (x *AwsPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AwsPolicy.ProtoReflect.Descriptor instead.
 func (*AwsPolicy) Descriptor() ([]byte, []int) {
-	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{13}
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AwsPolicy) GetName() string {
@@ -1131,11 +1215,12 @@ const file_agentguard_snapshot_v1_snapshot_proto_rawDesc = "" +
 	"account_id\x18\x01 \x01(\tR\taccountId\"A\n" +
 	"\tBlindSpot\x12\x1c\n" +
 	"\tattempted\x18\x01 \x01(\tR\tattempted\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xa3\x01\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"\xee\x01\n" +
 	"\fLinuxPayload\x12@\n" +
 	"\n" +
 	"agent_user\x18\x01 \x01(\v2!.agentguard.snapshot.v1.LinuxUserR\tagentUser\x12Q\n" +
-	"\x10credential_files\x18\x02 \x03(\v2&.agentguard.snapshot.v1.CredentialFileR\x0fcredentialFiles\"m\n" +
+	"\x10credential_files\x18\x02 \x03(\v2&.agentguard.snapshot.v1.CredentialFileR\x0fcredentialFiles\x12I\n" +
+	"\rdocker_socket\x18\x03 \x01(\v2$.agentguard.snapshot.v1.DockerSocketR\fdockerSocket\"m\n" +
 	"\tLinuxUser\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
 	"\x03uid\x18\x02 \x01(\rR\x03uid\x12:\n" +
@@ -1143,7 +1228,12 @@ const file_agentguard_snapshot_v1_snapshot_proto_rawDesc = "" +
 	"\n" +
 	"LinuxGroup\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x10\n" +
-	"\x03gid\x18\x02 \x01(\rR\x03gid\"\xa1\x02\n" +
+	"\x03gid\x18\x02 \x01(\rR\x03gid\"p\n" +
+	"\fDockerSocket\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1b\n" +
+	"\towner_uid\x18\x02 \x01(\rR\bownerUid\x12\x1b\n" +
+	"\tgroup_gid\x18\x03 \x01(\rR\bgroupGid\x12\x12\n" +
+	"\x04mode\x18\x04 \x01(\tR\x04mode\"\xa1\x02\n" +
 	"\x0eCredentialFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12:\n" +
 	"\x04kind\x18\x02 \x01(\x0e2&.agentguard.snapshot.v1.CredentialKindR\x04kind\x12\x1b\n" +
@@ -1197,7 +1287,7 @@ func file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP() []byte {
 }
 
 var file_agentguard_snapshot_v1_snapshot_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agentguard_snapshot_v1_snapshot_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_agentguard_snapshot_v1_snapshot_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_agentguard_snapshot_v1_snapshot_proto_goTypes = []any{
 	(CredentialKind)(0),              // 0: agentguard.snapshot.v1.CredentialKind
 	(PolicyKind)(0),                  // 1: agentguard.snapshot.v1.PolicyKind
@@ -1209,39 +1299,41 @@ var file_agentguard_snapshot_v1_snapshot_proto_goTypes = []any{
 	(*LinuxPayload)(nil),             // 7: agentguard.snapshot.v1.LinuxPayload
 	(*LinuxUser)(nil),                // 8: agentguard.snapshot.v1.LinuxUser
 	(*LinuxGroup)(nil),               // 9: agentguard.snapshot.v1.LinuxGroup
-	(*CredentialFile)(nil),           // 10: agentguard.snapshot.v1.CredentialFile
-	(*AwsCredentialProfile)(nil),     // 11: agentguard.snapshot.v1.AwsCredentialProfile
-	(*AwsPayload)(nil),               // 12: agentguard.snapshot.v1.AwsPayload
-	(*AwsIdentity)(nil),              // 13: agentguard.snapshot.v1.AwsIdentity
-	(*AwsGroup)(nil),                 // 14: agentguard.snapshot.v1.AwsGroup
-	(*AwsPolicy)(nil),                // 15: agentguard.snapshot.v1.AwsPolicy
-	(*timestamppb.Timestamp)(nil),    // 16: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),          // 17: google.protobuf.Struct
+	(*DockerSocket)(nil),             // 10: agentguard.snapshot.v1.DockerSocket
+	(*CredentialFile)(nil),           // 11: agentguard.snapshot.v1.CredentialFile
+	(*AwsCredentialProfile)(nil),     // 12: agentguard.snapshot.v1.AwsCredentialProfile
+	(*AwsPayload)(nil),               // 13: agentguard.snapshot.v1.AwsPayload
+	(*AwsIdentity)(nil),              // 14: agentguard.snapshot.v1.AwsIdentity
+	(*AwsGroup)(nil),                 // 15: agentguard.snapshot.v1.AwsGroup
+	(*AwsPolicy)(nil),                // 16: agentguard.snapshot.v1.AwsPolicy
+	(*timestamppb.Timestamp)(nil),    // 17: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),          // 18: google.protobuf.Struct
 }
 var file_agentguard_snapshot_v1_snapshot_proto_depIdxs = []int32{
-	16, // 0: agentguard.snapshot.v1.Snapshot.collected_at:type_name -> google.protobuf.Timestamp
+	17, // 0: agentguard.snapshot.v1.Snapshot.collected_at:type_name -> google.protobuf.Timestamp
 	3,  // 1: agentguard.snapshot.v1.Snapshot.environment:type_name -> agentguard.snapshot.v1.EnvironmentIdentity
 	6,  // 2: agentguard.snapshot.v1.Snapshot.blind_spots:type_name -> agentguard.snapshot.v1.BlindSpot
 	7,  // 3: agentguard.snapshot.v1.Snapshot.linux:type_name -> agentguard.snapshot.v1.LinuxPayload
-	12, // 4: agentguard.snapshot.v1.Snapshot.aws:type_name -> agentguard.snapshot.v1.AwsPayload
+	13, // 4: agentguard.snapshot.v1.Snapshot.aws:type_name -> agentguard.snapshot.v1.AwsPayload
 	4,  // 5: agentguard.snapshot.v1.EnvironmentIdentity.linux:type_name -> agentguard.snapshot.v1.LinuxEnvironmentIdentity
 	5,  // 6: agentguard.snapshot.v1.EnvironmentIdentity.aws:type_name -> agentguard.snapshot.v1.AwsEnvironmentIdentity
 	8,  // 7: agentguard.snapshot.v1.LinuxPayload.agent_user:type_name -> agentguard.snapshot.v1.LinuxUser
-	10, // 8: agentguard.snapshot.v1.LinuxPayload.credential_files:type_name -> agentguard.snapshot.v1.CredentialFile
-	9,  // 9: agentguard.snapshot.v1.LinuxUser.groups:type_name -> agentguard.snapshot.v1.LinuxGroup
-	0,  // 10: agentguard.snapshot.v1.CredentialFile.kind:type_name -> agentguard.snapshot.v1.CredentialKind
-	11, // 11: agentguard.snapshot.v1.CredentialFile.aws_profiles:type_name -> agentguard.snapshot.v1.AwsCredentialProfile
-	13, // 12: agentguard.snapshot.v1.AwsPayload.identities:type_name -> agentguard.snapshot.v1.AwsIdentity
-	15, // 13: agentguard.snapshot.v1.AwsIdentity.policies:type_name -> agentguard.snapshot.v1.AwsPolicy
-	14, // 14: agentguard.snapshot.v1.AwsIdentity.groups:type_name -> agentguard.snapshot.v1.AwsGroup
-	15, // 15: agentguard.snapshot.v1.AwsGroup.policies:type_name -> agentguard.snapshot.v1.AwsPolicy
-	17, // 16: agentguard.snapshot.v1.AwsPolicy.document:type_name -> google.protobuf.Struct
-	1,  // 17: agentguard.snapshot.v1.AwsPolicy.kind:type_name -> agentguard.snapshot.v1.PolicyKind
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	11, // 8: agentguard.snapshot.v1.LinuxPayload.credential_files:type_name -> agentguard.snapshot.v1.CredentialFile
+	10, // 9: agentguard.snapshot.v1.LinuxPayload.docker_socket:type_name -> agentguard.snapshot.v1.DockerSocket
+	9,  // 10: agentguard.snapshot.v1.LinuxUser.groups:type_name -> agentguard.snapshot.v1.LinuxGroup
+	0,  // 11: agentguard.snapshot.v1.CredentialFile.kind:type_name -> agentguard.snapshot.v1.CredentialKind
+	12, // 12: agentguard.snapshot.v1.CredentialFile.aws_profiles:type_name -> agentguard.snapshot.v1.AwsCredentialProfile
+	14, // 13: agentguard.snapshot.v1.AwsPayload.identities:type_name -> agentguard.snapshot.v1.AwsIdentity
+	16, // 14: agentguard.snapshot.v1.AwsIdentity.policies:type_name -> agentguard.snapshot.v1.AwsPolicy
+	15, // 15: agentguard.snapshot.v1.AwsIdentity.groups:type_name -> agentguard.snapshot.v1.AwsGroup
+	16, // 16: agentguard.snapshot.v1.AwsGroup.policies:type_name -> agentguard.snapshot.v1.AwsPolicy
+	18, // 17: agentguard.snapshot.v1.AwsPolicy.document:type_name -> google.protobuf.Struct
+	1,  // 18: agentguard.snapshot.v1.AwsPolicy.kind:type_name -> agentguard.snapshot.v1.PolicyKind
+	19, // [19:19] is the sub-list for method output_type
+	19, // [19:19] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_agentguard_snapshot_v1_snapshot_proto_init() }
@@ -1263,7 +1355,7 @@ func file_agentguard_snapshot_v1_snapshot_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentguard_snapshot_v1_snapshot_proto_rawDesc), len(file_agentguard_snapshot_v1_snapshot_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

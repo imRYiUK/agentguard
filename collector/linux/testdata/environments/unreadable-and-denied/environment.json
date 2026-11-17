@@ -1,0 +1,89 @@
+{
+  "process": {
+    "uid": 1001,
+    "gid": 1001
+  },
+  "entries": {
+    "/etc/machine-id": {
+      "lines": [
+        "e8c913f01b6f9ef3d7f19c3cef1cc390"
+      ],
+      "mode": "0444"
+    },
+    "/etc/ssh/ssh_host_ed25519_key.pub": {
+      "lines": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKCz9N+BaBs+qZOYOZUHeHq0ZXMM8zxkCTiUS9nc56eq host"
+      ],
+      "mode": "0644"
+    },
+    "/etc/ssh/ssh_host_rsa_key.pub": {
+      "lines": [
+        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2o0d9aNtArhnbAJbdUdGDc5UYF5FD+b3KcRXKbUqLD2B5M9/Qzg1zvltjxymFJzBUl1GEMNwJiPEJVSrFsP2FjogAhIwp8qFqgGJ+Hnw4jTrIqe/p7j8l2iL8hQDNRFvn0jxENi+9MUmDGoogdB26dyvgazYs0ftEitSabSKvTsDiS0bbm37rpe1P/4SAQaHKzAXFVy4EQsivPVwpBBVmJZR3znYtSatTvS74EURR4ZHFyIULfaFhz5r2VjaJR+7Rr6JslexK29FU39BZ++6IZpu0gaEsH46f3YJ1NebZFuLXva7Bt1h59psyVyNyFMHLsqAcp8EYloui/NPX5vj/ host"
+      ],
+      "mode": "0644"
+    },
+    "/etc/passwd": {
+      "lines": [
+        "root:x:0:0:root:/root:/bin/bash",
+        "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin",
+        "deploy:x:1001:1001:Deploy,,,:/home/deploy:/bin/bash",
+        "ops:x:1002:1002:Ops:/home/ops:/bin/bash"
+      ]
+    },
+    "/etc/group": {
+      "lines": [
+        "root:x:0:",
+        "docker:x:998:deploy",
+        "deploy:x:1001:",
+        "ops:x:1002:",
+        "aws-users:x:2001:deploy,ops"
+      ]
+    },
+    "/home/deploy": {
+      "type": "dir",
+      "mode": "0750",
+      "uid": 1001,
+      "gid": 1001
+    },
+    "/home/ops": {
+      "type": "dir",
+      "mode": "0755",
+      "uid": 1002,
+      "gid": 1002
+    },
+    "/home/ops/.aws": {
+      "type": "dir",
+      "mode": "0755",
+      "uid": 1002,
+      "gid": 1002
+    },
+    "/home/ops/.aws/credentials": {
+      "mode": "0600",
+      "uid": 1002,
+      "gid": 1002,
+      "lines": [
+        "[ops]",
+        "aws_access_key_id = AKIAJ3EXAMPLEKEYEXAM",
+        "aws_secret_access_key = 9drTJvcXLB89EXAMPLELB8923FB892xMFI"
+      ]
+    },
+    "/root": {
+      "type": "dir",
+      "mode": "0700",
+      "uid": 0,
+      "gid": 0
+    },
+    "/var/run": {
+      "type": "dir",
+      "mode": "0700",
+      "uid": 0,
+      "gid": 0
+    },
+    "/var/run/docker.sock": {
+      "type": "socket",
+      "mode": "0660",
+      "uid": 0,
+      "gid": 998
+    }
+  }
+}

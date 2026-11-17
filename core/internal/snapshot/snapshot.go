@@ -168,6 +168,15 @@ func validateLinux(l *snapshotv1.LinuxPayload) error {
 			return missing(fmt.Sprintf("$.linux.agentUser.groups[%d].name", i))
 		}
 	}
+	if sock := l.GetDockerSocket(); sock != nil {
+		const path = "$.linux.dockerSocket"
+		if !strings.HasPrefix(sock.GetPath(), "/") {
+			return invalid(path+".path", "must be an absolute path")
+		}
+		if _, err := strconv.ParseUint(sock.GetMode(), 8, 12); err != nil {
+			return invalid(path+".mode", "%q is not an octal permission mode", sock.GetMode())
+		}
+	}
 	for i, f := range l.GetCredentialFiles() {
 		path := fmt.Sprintf("$.linux.credentialFiles[%d]", i)
 		if !strings.HasPrefix(f.GetPath(), "/") {
