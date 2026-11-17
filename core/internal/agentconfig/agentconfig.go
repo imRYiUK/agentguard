@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
-	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/imRYiUK/agentguard/core/internal/jsonpath"
+	"github.com/imRYiUK/agentguard/core/internal/limits"
 )
 
 // File is one configuration file and the name it is reported under.
@@ -56,6 +58,9 @@ func ShellTools(mcpConfigs, settings []File) ([]ShellTool, error) {
 	var disabled []string
 	for _, f := range settings {
 		var s claudeSettings
+		if err := limits.CheckJSON(f.Content, limits.MaxConfigBytes); err != nil {
+			return nil, fmt.Errorf("%s: invalid Claude Code settings: %w", f.Source, err)
+		}
 		if err := json.Unmarshal(f.Content, &s); err != nil {
 			return nil, fmt.Errorf("%s: invalid Claude Code settings: %w", f.Source, err)
 		}
@@ -65,6 +70,9 @@ func ShellTools(mcpConfigs, settings []File) ([]ShellTool, error) {
 	var tools []ShellTool
 	for _, f := range mcpConfigs {
 		var c mcpConfig
+		if err := limits.CheckJSON(f.Content, limits.MaxConfigBytes); err != nil {
+			return nil, fmt.Errorf("%s: invalid MCP configuration: %w", f.Source, err)
+		}
 		if err := json.Unmarshal(f.Content, &c); err != nil {
 			return nil, fmt.Errorf("%s: invalid MCP configuration: %w", f.Source, err)
 		}
@@ -75,7 +83,7 @@ func ShellTools(mcpConfigs, settings []File) ([]ShellTool, error) {
 			tools = append(tools, ShellTool{
 				Server:   name,
 				Source:   f.Source,
-				Location: jsonPathKey("$.mcpServers", name),
+				Location: jsonpath.Key("$.mcpServers", name),
 			})
 		}
 	}
@@ -100,15 +108,4 @@ func sortedKeys[V any](m map[string]V) []string {
 	}
 	slices.Sort(keys)
 	return keys
-}
-
-var identifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
-
-// jsonPathKey appends an object key to a JSONPath, using dot notation when
-// the key allows it and bracket notation otherwise.
-func jsonPathKey(base, key string) string {
-	if identifier.MatchString(key) {
-		return base + "." + key
-	}
-	return base + "['" + strings.ReplaceAll(strings.ReplaceAll(key, `\`, `\\`), "'", `\'`) + "']"
 }

@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/imRYiUK/agentguard/core/internal/limits"
 )
 
 // SchemaVersion is the Agent Manifest schema version this package reads.
@@ -122,6 +124,9 @@ func (e *Error) Error() string {
 // Parse reads and validates an Agent Manifest. source is the name used in
 // error messages.
 func Parse(source string, content []byte) (*Manifest, error) {
+	if err := limits.CheckSize(len(content), limits.MaxConfigBytes); err != nil {
+		return nil, &Error{Source: source, Message: err.Error()}
+	}
 	var doc yaml.Node
 	if err := yaml.Unmarshal(content, &doc); err != nil {
 		return nil, &Error{Source: source, Message: "invalid YAML: " + strings.TrimPrefix(err.Error(), "yaml: ")}
@@ -129,12 +134,32 @@ func Parse(source string, content []byte) (*Manifest, error) {
 	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 {
 		return nil, &Error{Source: source, Message: "the manifest is empty"}
 	}
+	if deeper(&doc, 0) {
+		return nil, &Error{Source: source, Message: limits.ErrTooDeep.Error()}
+	}
 	d := &decoder{source: source}
 	m, err := d.manifest(doc.Content[0])
 	if err != nil {
 		return nil, err
 	}
 	return m, nil
+}
+
+// deeper reports whether n nests more than limits.MaxDepth levels of mappings
+// and lists. It does not follow aliases.
+func deeper(n *yaml.Node, depth int) bool {
+	if n.Kind == yaml.MappingNode || n.Kind == yaml.SequenceNode {
+		depth++
+		if depth > limits.MaxDepth {
+			return true
+		}
+	}
+	for _, c := range n.Content {
+		if deeper(c, depth) {
+			return true
+		}
+	}
+	return false
 }
 
 type decoder struct {
@@ -207,6 +232,9 @@ func (d *decoder) sequence(n *yaml.Node, path string) ([]*yaml.Node, error) {
 	}
 	if n.Kind != yaml.SequenceNode {
 		return nil, d.errorf(n, path, "must be a list")
+	}
+	if len(n.Content) > limits.MaxListLength {
+		return nil, d.errorf(n, path, "too many entries (%d; the limit is %d)", len(n.Content), limits.MaxListLength)
 	}
 	return n.Content, nil
 }

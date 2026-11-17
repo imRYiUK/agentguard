@@ -1,0 +1,20 @@
+version: 1
+agent:
+  name: deploy-agent
+  configs:
+    claudeCodeSettings:
+      - .claude/settings.json
+    mcp:
+      - .mcp.json
+environments:
+  - name: build-host
+    type: linux
+    identity:
+      machineId: e8c913f01b6f9ef3d7f19c3cef1cc390
+      sshHostKeyFingerprint: SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8
+    snapshot: snapshots/linux.json
+  - name: prod-aws
+    type: aws
+    identity:
+      accountId: "123456789012"
+    snapshot: snapshots/aws.json

@@ -1,0 +1,1 @@
+agentguard: agentguard.yaml: nesting is deeper than the limit of 32 levels

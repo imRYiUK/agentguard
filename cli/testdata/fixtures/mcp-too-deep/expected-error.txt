@@ -1,0 +1,1 @@
+agentguard: .mcp.json: invalid MCP configuration: nesting is deeper than the limit of 32 levels

@@ -1,0 +1,1 @@
+agentguard: snapshots/linux.json: invalid Snapshot: not valid JSON: invalid character 'c' looking for beginning of object key string

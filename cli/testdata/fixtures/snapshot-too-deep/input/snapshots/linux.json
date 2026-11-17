@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-linux-0001",
+  "collectorVersion": "0.0.0-fixture",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "deep": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]], "collectedBy": "deploy",
+  "environment": {
+    "linux": {
+      "machineId": "e8c913f01b6f9ef3d7f19c3cef1cc390",
+      "sshHostKeyFingerprint": "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "read /etc/sudoers",
+      "reason": "permission denied"
+    }
+  ],
+  "linux": {
+    "agentUser": {
+      "name": "deploy",
+      "uid": 1001,
+      "groups": [
+        {
+          "name": "deploy",
+          "gid": 1001
+        },
+        {
+          "name": "aws-users",
+          "gid": 2001
+        }
+      ]
+    },
+    "credentialFiles": [
+      {
+        "path": "/home/ops/.aws/credentials",
+        "kind": "CREDENTIAL_KIND_AWS_SHARED_CREDENTIALS",
+        "ownerUid": 1002,
+        "groupGid": 2001,
+        "mode": "0640",
+        "fingerprint": "sha256:541789cf5fa4ea552aac60dfca115120c222ef42791952bb29c1d406efd6748d",
+        "awsProfiles": [
+          {
+            "name": "ops",
+            "accessKeyIdFingerprint": "sha256:2199c040063f5758eba7a989455e6c716f3ac3ad2aa6f73b9b3ae8967d192380"
+          }
+        ]
+      }
+    ]
+  }
+}

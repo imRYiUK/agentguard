@@ -1,0 +1,15 @@
+{
+  "deep": [[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]], "mcpServers": {
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+    "shell": {
+      "command": "uvx",
+      "args": ["mcp-shell-server"],
+      "env": {
+        "ALLOW_COMMANDS": "ls,cat,aws"
+      }
+    }
+  }
+}

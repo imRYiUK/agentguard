@@ -74,6 +74,18 @@ Snapshot of that Environment's type:
 agentguard: snapshots/aws.json: Environment identity mismatch: Environment "prod-aws" (environments[1]) expects accountId "999999999999", but the Snapshot records accountId "123456789012"
 ```
 
+## Limits
+
+A manifest is untrusted input, so it is refused before any analysis if it:
+
+- is larger than 1 MiB,
+- nests mappings and lists more than 32 levels deep, or
+- has a list (environments, config files, bindings, sensitivity labels)
+  with more than 64 entries.
+
+The agent configuration files it names have the same 1 MiB and 32-level
+limits. Snapshot files may be up to 8 MiB.
+
 ## Changing the schema
 
 A change that old manifests cannot satisfy raises `version`. The core

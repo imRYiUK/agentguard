@@ -1,0 +1,1 @@
+agentguard: .claude/settings.json: invalid Claude Code settings: invalid character '{' after object key

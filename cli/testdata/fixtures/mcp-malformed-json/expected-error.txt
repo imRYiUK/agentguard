@@ -1,0 +1,1 @@
+agentguard: .mcp.json: invalid MCP configuration: invalid character '{' after object key

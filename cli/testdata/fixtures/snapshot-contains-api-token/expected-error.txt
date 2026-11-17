@@ -1,0 +1,1 @@
+agentguard: snapshots/linux.json: Snapshot rejected: $.blindSpots[0].reason looks like a GitHub token; a Snapshot never holds a secret value

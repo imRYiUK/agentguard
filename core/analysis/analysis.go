@@ -21,7 +21,9 @@ import (
 	"github.com/imRYiUK/agentguard/core/internal/agentconfig"
 	"github.com/imRYiUK/agentguard/core/internal/awspolicy"
 	"github.com/imRYiUK/agentguard/core/internal/impact"
+	"github.com/imRYiUK/agentguard/core/internal/limits"
 	"github.com/imRYiUK/agentguard/core/internal/manifest"
+	"github.com/imRYiUK/agentguard/core/internal/snapshot"
 )
 
 // ManifestFile is the name of the Agent Manifest at the root of an Analysis
@@ -95,7 +97,7 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 }
 
 func readManifest(files fs.FS) (*manifest.Manifest, error) {
-	content, err := fs.ReadFile(files, ManifestFile)
+	content, err := limits.ReadFile(files, ManifestFile, limits.MaxConfigBytes)
 	if err != nil {
 		return nil, fmt.Errorf("reading the Agent Manifest: %w", err)
 	}
@@ -117,7 +119,7 @@ type inputFile struct {
 func readFiles(files fs.FS, field string, paths []string) ([]inputFile, error) {
 	var out []inputFile
 	for i, p := range paths {
-		content, err := fs.ReadFile(files, p)
+		content, err := limits.ReadFile(files, p, limits.MaxConfigBytes)
 		if err != nil {
 			return nil, fmt.Errorf("%s[%d]: %w", field, i, err)
 		}
@@ -184,24 +186,21 @@ func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*a
 	var hosts []*linuxHost
 	var identities []*awsIdentity
 	for _, env := range envs {
-		content, err := fs.ReadFile(files, env.Snapshot)
+		content, err := limits.ReadFile(files, env.Snapshot, limits.MaxSnapshotBytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf("environments[%d].snapshot: %w", env.Index, err)
 		}
 		source := env.Snapshot
-		var snap snapshotv1.Snapshot
-		if err := protojson.Unmarshal(content, &snap); err != nil {
-			return nil, nil, fmt.Errorf("%s: invalid Snapshot: %w", source, err)
+		snap, err := snapshot.Parse(source, content)
+		if err != nil {
+			return nil, nil, err
 		}
-		if err := checkEnvironmentIdentity(source, env, &snap); err != nil {
+		if err := checkEnvironmentIdentity(source, env, snap); err != nil {
 			return nil, nil, err
 		}
 		switch p := snap.Payload.(type) {
 		case *snapshotv1.Snapshot_Linux:
 			user := p.Linux.GetAgentUser()
-			if user == nil {
-				return nil, nil, fmt.Errorf("%s: invalid Snapshot: linux.agentUser is required", source)
-			}
 			hosts = append(hosts, &linuxHost{
 				source:  source,
 				payload: p.Linux,
@@ -217,8 +216,6 @@ func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*a
 				}
 				identities = append(identities, ident)
 			}
-		default:
-			return nil, nil, fmt.Errorf("%s: invalid Snapshot: it has no linux or aws payload", source)
 		}
 	}
 	return hosts, identities, nil
