@@ -1,0 +1,1 @@
+agentguard: snapshots/aws.json: Environment identity mismatch: Environment "prod-aws" (environments[1]) expects accountId "999999999999", but the Snapshot records accountId "123456789012"

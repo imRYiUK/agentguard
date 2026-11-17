@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -12,8 +13,13 @@ import (
 
 // The golden-fixture harness. Each folder under testdata/fixtures holds an
 // input/ folder and the expected CLI output for it. The test runs the real
-// CLI binary over input/ and compares its stdout with the expected file
-// byte for byte.
+// CLI binary over input/ and compares the output with the expected file byte
+// for byte.
+//
+// A fixture that expects Reach Paths has an expected.json holding the
+// stdout. A fixture whose input must be rejected has an expected-error.txt
+// holding the stderr; the CLI must then exit with status 1 and print nothing
+// to stdout.
 //
 // Regenerate expected files after an intended change with:
 //
@@ -59,31 +65,56 @@ func TestAnalyzeFixtures(t *testing.T) {
 		}
 		t.Run(entry.Name(), func(t *testing.T) {
 			fixture := filepath.Join(fixturesDir, entry.Name())
-			expectedPath := filepath.Join(fixture, "expected.json")
+			expectedJSON := filepath.Join(fixture, "expected.json")
+			expectedError := filepath.Join(fixture, "expected-error.txt")
 
 			var stdout, stderr bytes.Buffer
 			cmd := exec.Command(binary, "analyze", filepath.Join(fixture, "input"))
 			cmd.Stdout = &stdout
 			cmd.Stderr = &stderr
-			if err := cmd.Run(); err != nil {
-				t.Fatalf("agentguard analyze: %v\nstderr:\n%s", err, stderr.String())
+			runErr := cmd.Run()
+
+			rejected := fileExists(expectedError)
+			if *update {
+				rejected = runErr != nil
+			}
+			var got, path string
+			if rejected {
+				var exit *exec.ExitError
+				if !errors.As(runErr, &exit) || exit.ExitCode() != 1 {
+					t.Fatalf("agentguard analyze: want exit status 1, got %v\nstderr:\n%s", runErr, stderr.String())
+				}
+				if stdout.Len() != 0 {
+					t.Errorf("a rejected input must print nothing to stdout, got:\n%s", stdout.String())
+				}
+				got, path = stderr.String(), expectedError
+			} else {
+				if runErr != nil {
+					t.Fatalf("agentguard analyze: %v\nstderr:\n%s", runErr, stderr.String())
+				}
+				got, path = stdout.String(), expectedJSON
 			}
 
 			if *update {
-				if err := os.WriteFile(expectedPath, stdout.Bytes(), 0o644); err != nil {
+				if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
 					t.Fatal(err)
 				}
 				return
 			}
 
-			expected, err := os.ReadFile(expectedPath)
+			expected, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("reading expected output (run with -update to create it): %v", err)
 			}
-			if !bytes.Equal(stdout.Bytes(), expected) {
+			if got != string(expected) {
 				t.Errorf("output differs from %s (run with -update to accept)\n--- got ---\n%s\n--- want ---\n%s",
-					expectedPath, stdout.String(), expected)
+					path, got, expected)
 			}
 		})
 	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }

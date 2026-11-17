@@ -1,0 +1,1 @@
+agentguard: agentguard.yaml:19: environments[1].identity.accountId: must be a 12-digit AWS account ID, got "12345"
