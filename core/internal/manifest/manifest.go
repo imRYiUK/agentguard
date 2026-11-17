@@ -82,6 +82,9 @@ type Environment struct {
 // DeclaredBinding is an Identity Binding stated by the user: the agent can act
 // as Identity in the named Environment.
 type DeclaredBinding struct {
+	// Index is the binding's position in the manifest's declaredBindings
+	// list.
+	Index int
 	// Environment is the name of an Environment in the manifest.
 	Environment string
 	// Identity is a Linux user name for a Linux Environment, or an ARN for an
@@ -494,7 +497,7 @@ func (d *decoder) declaredBindings(n *yaml.Node, envs []Environment) ([]Declared
 		if err != nil {
 			return nil, err
 		}
-		var b DeclaredBinding
+		b := DeclaredBinding{Index: i}
 		envNode, err := d.required(f, item, path, "environment")
 		if err != nil {
 			return nil, err

@@ -1,0 +1,15 @@
+{
+  "impactMappingVersion": "2",
+  "secondaryFindings": [
+    {
+      "kind": "SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION",
+      "agentDeployment": "deploy-agent",
+      "label": "unrestricted command execution: shell Tool (MCP server shell)",
+      "evidence": {
+        "source": ".mcp.json",
+        "location": "$.mcpServers.shell"
+      },
+      "confidence": "CONFIDENCE_HIGH"
+    }
+  ]
+}

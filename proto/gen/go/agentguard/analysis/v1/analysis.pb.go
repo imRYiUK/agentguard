@@ -138,6 +138,63 @@ func (LinkKind) EnumDescriptor() ([]byte, []int) {
 	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{1}
 }
 
+// Where an Identity Binding comes from.
+type BindingOrigin int32
+
+const (
+	BindingOrigin_BINDING_ORIGIN_UNSPECIFIED BindingOrigin = 0
+	// Stated by the user, for example in the Agent Manifest.
+	BindingOrigin_BINDING_ORIGIN_DECLARED BindingOrigin = 1
+	// Observed directly in evidence, such as a credential file or the user the
+	// agent runs as.
+	BindingOrigin_BINDING_ORIGIN_DISCOVERED BindingOrigin = 2
+	// Derived indirectly from other facts, so it carries lower confidence.
+	BindingOrigin_BINDING_ORIGIN_INFERRED BindingOrigin = 3
+)
+
+// Enum value maps for BindingOrigin.
+var (
+	BindingOrigin_name = map[int32]string{
+		0: "BINDING_ORIGIN_UNSPECIFIED",
+		1: "BINDING_ORIGIN_DECLARED",
+		2: "BINDING_ORIGIN_DISCOVERED",
+		3: "BINDING_ORIGIN_INFERRED",
+	}
+	BindingOrigin_value = map[string]int32{
+		"BINDING_ORIGIN_UNSPECIFIED": 0,
+		"BINDING_ORIGIN_DECLARED":    1,
+		"BINDING_ORIGIN_DISCOVERED":  2,
+		"BINDING_ORIGIN_INFERRED":    3,
+	}
+)
+
+func (x BindingOrigin) Enum() *BindingOrigin {
+	p := new(BindingOrigin)
+	*p = x
+	return p
+}
+
+func (x BindingOrigin) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BindingOrigin) Descriptor() protoreflect.EnumDescriptor {
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[2].Descriptor()
+}
+
+func (BindingOrigin) Type() protoreflect.EnumType {
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[2]
+}
+
+func (x BindingOrigin) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BindingOrigin.Descriptor instead.
+func (BindingOrigin) EnumDescriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{2}
+}
+
 // The kind of a Secondary Finding.
 type SecondaryFindingKind int32
 
@@ -151,6 +208,9 @@ const (
 	// A policy statement that allows every action, or every action of a
 	// service on every resource.
 	SecondaryFindingKind_SECONDARY_FINDING_KIND_WILDCARD_POLICY SecondaryFindingKind = 3
+	// A Declared Binding in the Agent Manifest that contradicts what the
+	// evidence shows. Its evidence is the Declared Binding.
+	SecondaryFindingKind_SECONDARY_FINDING_KIND_BINDING_MISMATCH SecondaryFindingKind = 4
 )
 
 // Enum value maps for SecondaryFindingKind.
@@ -160,12 +220,14 @@ var (
 		1: "SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION",
 		2: "SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS",
 		3: "SECONDARY_FINDING_KIND_WILDCARD_POLICY",
+		4: "SECONDARY_FINDING_KIND_BINDING_MISMATCH",
 	}
 	SecondaryFindingKind_value = map[string]int32{
 		"SECONDARY_FINDING_KIND_UNSPECIFIED":                    0,
 		"SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION": 1,
 		"SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS":        2,
 		"SECONDARY_FINDING_KIND_WILDCARD_POLICY":                3,
+		"SECONDARY_FINDING_KIND_BINDING_MISMATCH":               4,
 	}
 )
 
@@ -180,11 +242,11 @@ func (x SecondaryFindingKind) String() string {
 }
 
 func (SecondaryFindingKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agentguard_analysis_v1_analysis_proto_enumTypes[2].Descriptor()
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[3].Descriptor()
 }
 
 func (SecondaryFindingKind) Type() protoreflect.EnumType {
-	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[2]
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[3]
 }
 
 func (x SecondaryFindingKind) Number() protoreflect.EnumNumber {
@@ -193,7 +255,7 @@ func (x SecondaryFindingKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SecondaryFindingKind.Descriptor instead.
 func (SecondaryFindingKind) EnumDescriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{2}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{3}
 }
 
 // The result of one analysis of an Agent Deployment.
@@ -338,8 +400,11 @@ type Link struct {
 	Confidence Confidence `protobuf:"varint,4,opt,name=confidence,proto3,enum=agentguard.analysis.v1.Confidence" json:"confidence,omitempty"`
 	// Why the confidence is reduced. Empty when it is high.
 	ConfidenceReason string `protobuf:"bytes,5,opt,name=confidence_reason,json=confidenceReason,proto3" json:"confidence_reason,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// For an Identity link: where the Identity Binding comes from. Unspecified
+	// for every other kind of link.
+	Origin        BindingOrigin `protobuf:"varint,6,opt,name=origin,proto3,enum=agentguard.analysis.v1.BindingOrigin" json:"origin,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Link) Reset() {
@@ -405,6 +470,13 @@ func (x *Link) GetConfidenceReason() string {
 		return x.ConfidenceReason
 	}
 	return ""
+}
+
+func (x *Link) GetOrigin() BindingOrigin {
+	if x != nil {
+		return x.Origin
+	}
+	return BindingOrigin_BINDING_ORIGIN_UNSPECIFIED
 }
 
 // The evidence behind a link.
@@ -568,7 +640,7 @@ const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\x05links\x18\x02 \x03(\v2\x1c.agentguard.analysis.v1.LinkR\x05links\x12B\n" +
 	"\n" +
 	"confidence\x18\x03 \x01(\x0e2\".agentguard.analysis.v1.ConfidenceR\n" +
-	"confidence\"\x81\x02\n" +
+	"confidence\"\xc0\x02\n" +
 	"\x04Link\x124\n" +
 	"\x04kind\x18\x01 \x01(\x0e2 .agentguard.analysis.v1.LinkKindR\x04kind\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12<\n" +
@@ -576,7 +648,8 @@ const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\n" +
 	"confidence\x18\x04 \x01(\x0e2\".agentguard.analysis.v1.ConfidenceR\n" +
 	"confidence\x12+\n" +
-	"\x11confidence_reason\x18\x05 \x01(\tR\x10confidenceReason\">\n" +
+	"\x11confidence_reason\x18\x05 \x01(\tR\x10confidenceReason\x12=\n" +
+	"\x06origin\x18\x06 \x01(\x0e2%.agentguard.analysis.v1.BindingOriginR\x06origin\">\n" +
 	"\bEvidence\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12\x1a\n" +
 	"\blocation\x18\x02 \x01(\tR\blocation\"\xc4\x02\n" +
@@ -600,12 +673,18 @@ const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\x12LINK_KIND_IDENTITY\x10\x02\x12\x1a\n" +
 	"\x16LINK_KIND_IDENTITY_HOP\x10\x03\x12\x1f\n" +
 	"\x1bLINK_KIND_NATIVE_PERMISSION\x10\x04\x12\x14\n" +
-	"\x10LINK_KIND_IMPACT\x10\x05*\xd9\x01\n" +
+	"\x10LINK_KIND_IMPACT\x10\x05*\x88\x01\n" +
+	"\rBindingOrigin\x12\x1e\n" +
+	"\x1aBINDING_ORIGIN_UNSPECIFIED\x10\x00\x12\x1b\n" +
+	"\x17BINDING_ORIGIN_DECLARED\x10\x01\x12\x1d\n" +
+	"\x19BINDING_ORIGIN_DISCOVERED\x10\x02\x12\x1b\n" +
+	"\x17BINDING_ORIGIN_INFERRED\x10\x03*\x86\x02\n" +
 	"\x14SecondaryFindingKind\x12&\n" +
 	"\"SECONDARY_FINDING_KIND_UNSPECIFIED\x10\x00\x129\n" +
 	"5SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION\x10\x01\x122\n" +
 	".SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS\x10\x02\x12*\n" +
-	"&SECONDARY_FINDING_KIND_WILDCARD_POLICY\x10\x03B\xf3\x01\n" +
+	"&SECONDARY_FINDING_KIND_WILDCARD_POLICY\x10\x03\x12+\n" +
+	"'SECONDARY_FINDING_KIND_BINDING_MISMATCH\x10\x04B\xf3\x01\n" +
 	"\x1acom.agentguard.analysis.v1B\rAnalysisProtoP\x01ZLgithub.com/imRYiUK/agentguard/proto/gen/go/agentguard/analysis/v1;analysisv1\xa2\x02\x03AAX\xaa\x02\x16Agentguard.Analysis.V1\xca\x02\x16Agentguard\\Analysis\\V1\xe2\x02\"Agentguard\\Analysis\\V1\\GPBMetadata\xea\x02\x18Agentguard::Analysis::V1b\x06proto3"
 
 var (
@@ -620,34 +699,36 @@ func file_agentguard_analysis_v1_analysis_proto_rawDescGZIP() []byte {
 	return file_agentguard_analysis_v1_analysis_proto_rawDescData
 }
 
-var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
 var file_agentguard_analysis_v1_analysis_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_agentguard_analysis_v1_analysis_proto_goTypes = []any{
 	(Confidence)(0),           // 0: agentguard.analysis.v1.Confidence
 	(LinkKind)(0),             // 1: agentguard.analysis.v1.LinkKind
-	(SecondaryFindingKind)(0), // 2: agentguard.analysis.v1.SecondaryFindingKind
-	(*AnalysisResult)(nil),    // 3: agentguard.analysis.v1.AnalysisResult
-	(*ReachPath)(nil),         // 4: agentguard.analysis.v1.ReachPath
-	(*Link)(nil),              // 5: agentguard.analysis.v1.Link
-	(*Evidence)(nil),          // 6: agentguard.analysis.v1.Evidence
-	(*SecondaryFinding)(nil),  // 7: agentguard.analysis.v1.SecondaryFinding
+	(BindingOrigin)(0),        // 2: agentguard.analysis.v1.BindingOrigin
+	(SecondaryFindingKind)(0), // 3: agentguard.analysis.v1.SecondaryFindingKind
+	(*AnalysisResult)(nil),    // 4: agentguard.analysis.v1.AnalysisResult
+	(*ReachPath)(nil),         // 5: agentguard.analysis.v1.ReachPath
+	(*Link)(nil),              // 6: agentguard.analysis.v1.Link
+	(*Evidence)(nil),          // 7: agentguard.analysis.v1.Evidence
+	(*SecondaryFinding)(nil),  // 8: agentguard.analysis.v1.SecondaryFinding
 }
 var file_agentguard_analysis_v1_analysis_proto_depIdxs = []int32{
-	4,  // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
-	7,  // 1: agentguard.analysis.v1.AnalysisResult.secondary_findings:type_name -> agentguard.analysis.v1.SecondaryFinding
-	5,  // 2: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
+	5,  // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
+	8,  // 1: agentguard.analysis.v1.AnalysisResult.secondary_findings:type_name -> agentguard.analysis.v1.SecondaryFinding
+	6,  // 2: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
 	0,  // 3: agentguard.analysis.v1.ReachPath.confidence:type_name -> agentguard.analysis.v1.Confidence
 	1,  // 4: agentguard.analysis.v1.Link.kind:type_name -> agentguard.analysis.v1.LinkKind
-	6,  // 5: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
+	7,  // 5: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
 	0,  // 6: agentguard.analysis.v1.Link.confidence:type_name -> agentguard.analysis.v1.Confidence
-	2,  // 7: agentguard.analysis.v1.SecondaryFinding.kind:type_name -> agentguard.analysis.v1.SecondaryFindingKind
-	6,  // 8: agentguard.analysis.v1.SecondaryFinding.evidence:type_name -> agentguard.analysis.v1.Evidence
-	0,  // 9: agentguard.analysis.v1.SecondaryFinding.confidence:type_name -> agentguard.analysis.v1.Confidence
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	2,  // 7: agentguard.analysis.v1.Link.origin:type_name -> agentguard.analysis.v1.BindingOrigin
+	3,  // 8: agentguard.analysis.v1.SecondaryFinding.kind:type_name -> agentguard.analysis.v1.SecondaryFindingKind
+	7,  // 9: agentguard.analysis.v1.SecondaryFinding.evidence:type_name -> agentguard.analysis.v1.Evidence
+	0,  // 10: agentguard.analysis.v1.SecondaryFinding.confidence:type_name -> agentguard.analysis.v1.Confidence
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_agentguard_analysis_v1_analysis_proto_init() }
@@ -660,7 +741,7 @@ func file_agentguard_analysis_v1_analysis_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentguard_analysis_v1_analysis_proto_rawDesc), len(file_agentguard_analysis_v1_analysis_proto_rawDesc)),
-			NumEnums:      3,
+			NumEnums:      4,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,

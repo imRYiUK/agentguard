@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-linux-0001",
+  "collectorVersion": "0.0.0-fixture",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "collectedBy": "deploy",
+  "environment": {
+    "linux": {
+      "machineId": "e8c913f01b6f9ef3d7f19c3cef1cc390",
+      "sshHostKeyFingerprint": "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "read /etc/sudoers",
+      "reason": "permission denied"
+    }
+  ],
+  "linux": {
+    "agentUser": {
+      "name": "deploy",
+      "uid": 1001,
+      "groups": [
+        {
+          "name": "deploy",
+          "gid": 1001
+        },
+        {
+          "name": "docker",
+          "gid": 998
+        }
+      ]
+    },
+    "credentialFiles": []
+  }
+}

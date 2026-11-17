@@ -20,6 +20,7 @@ import (
 
 	"github.com/imRYiUK/agentguard/core/internal/agentconfig"
 	"github.com/imRYiUK/agentguard/core/internal/awspolicy"
+	"github.com/imRYiUK/agentguard/core/internal/hopsearch"
 	"github.com/imRYiUK/agentguard/core/internal/impact"
 	"github.com/imRYiUK/agentguard/core/internal/limits"
 	"github.com/imRYiUK/agentguard/core/internal/manifest"
@@ -74,28 +75,32 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 		ImpactMappingVersion: impacts.Version,
 		SecondaryFindings:    secondaryFindings(m.Agent.Name, tools, filesystem, aws),
 	}
+	for _, host := range linux {
+		if err := host.findChains(aws); err != nil {
+			return nil, err
+		}
+	}
+	result.SecondaryFindings = append(result.SecondaryFindings,
+		bindingMismatches(m, linux, aws)...)
 	for _, tool := range tools {
 		toolLink := link(analysisv1.LinkKind_LINK_KIND_TOOL,
 			fmt.Sprintf("shell Tool (MCP server %s)", tool.Server), tool.Source, tool.Location)
 		for _, host := range linux {
-			hops, err := credentialHops(host, aws)
-			if err != nil {
-				return nil, err
-			}
-			for _, hop := range hops {
-				perms, err := hop.to.permissions(impacts, budget)
+			for _, chain := range host.chains {
+				to := chain[len(chain)-1].Via.identity
+				if to == nil {
+					continue
+				}
+				perms, err := to.permissions(impacts, budget)
 				if err != nil {
 					return nil, err
 				}
 				for _, perm := range perms {
-					links := []*analysisv1.Link{
-						toolLink,
-						host.userLink,
-						hop.link,
-						hop.to.link,
-						perm.link,
-						perm.impact,
+					links := []*analysisv1.Link{toolLink, host.userLink}
+					for _, h := range chain {
+						links = append(links, h.Via.link, h.Via.toLink)
 					}
+					links = append(links, perm.link, perm.impact)
 					result.ReachPaths = append(result.ReachPaths, &analysisv1.ReachPath{
 						AgentDeployment: m.Agent.Name,
 						Links:           links,
@@ -180,17 +185,26 @@ func configFiles(files []inputFile) []agentconfig.File {
 
 // linuxHost is the analysis view of a Linux Snapshot.
 type linuxHost struct {
-	source   string
-	payload  *snapshotv1.LinuxPayload
-	userLink *analysisv1.Link
+	// environment is the name of the Environment in the manifest.
+	environment string
+	source      string
+	payload     *snapshotv1.LinuxPayload
+	userLink    *analysisv1.Link
+	// agentHops are the credential-file hops the agent user can take
+	// itself, without any inferred step.
+	agentHops []hopsearch.Hop[step]
+	// chains are the Identity Hop chains leading away from the agent user.
+	chains [][]hopsearch.Hop[step]
 }
 
 // awsIdentity is the analysis view of one AWS Identity in an AWS Snapshot.
 type awsIdentity struct {
-	source   string
-	location string
-	identity *snapshotv1.AwsIdentity
-	link     *analysisv1.Link
+	// environment is the name of the Environment in the manifest.
+	environment string
+	source      string
+	location    string
+	identity    *snapshotv1.AwsIdentity
+	link        *analysisv1.Link
 	// statements are the statements of every policy that applies to the
 	// Identity: its own managed and inline policies, then those of its
 	// groups. A statement's Policy indexes policyLocations.
@@ -208,12 +222,6 @@ type awsIdentity struct {
 type permission struct {
 	link   *analysisv1.Link
 	impact *analysisv1.Link
-}
-
-// hop is an Identity Hop from a Linux user to an AWS Identity.
-type hop struct {
-	link *analysisv1.Link
-	to   *awsIdentity
 }
 
 // readSnapshots reads the Snapshot of each Environment in the manifest, and
@@ -239,15 +247,16 @@ func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*a
 		case *snapshotv1.Snapshot_Linux:
 			user := p.Linux.GetAgentUser()
 			hosts = append(hosts, &linuxHost{
-				source:  source,
-				payload: p.Linux,
-				userLink: link(analysisv1.LinkKind_LINK_KIND_IDENTITY,
+				environment: env.Name,
+				source:      source,
+				payload:     p.Linux,
+				userLink: bindingLink(analysisv1.BindingOrigin_BINDING_ORIGIN_DISCOVERED,
 					fmt.Sprintf("Linux user %s (uid %d)", user.GetName(), user.GetUid()),
 					source, "$.linux.agentUser"),
 			})
 		case *snapshotv1.Snapshot_Aws:
 			for i, id := range p.Aws.GetIdentities() {
-				ident, err := readAWSIdentity(source, fmt.Sprintf("$.aws.identities[%d]", i), id)
+				ident, err := readAWSIdentity(env.Name, source, fmt.Sprintf("$.aws.identities[%d]", i), id)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -258,12 +267,13 @@ func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*a
 	return hosts, identities, nil
 }
 
-func readAWSIdentity(source, location string, id *snapshotv1.AwsIdentity) (*awsIdentity, error) {
+func readAWSIdentity(environment, source, location string, id *snapshotv1.AwsIdentity) (*awsIdentity, error) {
 	ident := &awsIdentity{
-		source:   source,
-		location: location,
-		identity: id,
-		link:     link(analysisv1.LinkKind_LINK_KIND_IDENTITY, awsIdentityLabel(id.GetArn()), source, location),
+		environment: environment,
+		source:      source,
+		location:    location,
+		identity:    id,
+		link:        bindingLink(analysisv1.BindingOrigin_BINDING_ORIGIN_DISCOVERED, awsIdentityLabel(id.GetArn()), source, location),
 	}
 	add := func(policies []*snapshotv1.AwsPolicy, listLocation string) error {
 		for i, policy := range policies {
@@ -413,40 +423,6 @@ func awsIdentityLabel(arn string) string {
 	}
 }
 
-// credentialHops returns the Identity Hops from a host's agent user to AWS
-// Identities, through AWS credential files that user can read.
-func credentialHops(host *linuxHost, identities []*awsIdentity) ([]hop, error) {
-	user := host.payload.GetAgentUser()
-	var hops []hop
-	for i, file := range host.payload.GetCredentialFiles() {
-		if file.GetKind() != snapshotv1.CredentialKind_CREDENTIAL_KIND_AWS_SHARED_CREDENTIALS {
-			continue
-		}
-		readable, err := canRead(user, file)
-		if err != nil {
-			return nil, fmt.Errorf("%s: invalid Snapshot: $.linux.credentialFiles[%d].mode: %w", host.source, i, err)
-		}
-		if !readable {
-			continue
-		}
-		for j, profile := range file.GetAwsProfiles() {
-			for _, ident := range identities {
-				if profile.GetAccessKeyIdFingerprint() == "" ||
-					!slices.Contains(ident.identity.GetAccessKeyIdFingerprints(), profile.GetAccessKeyIdFingerprint()) {
-					continue
-				}
-				hops = append(hops, hop{
-					link: link(analysisv1.LinkKind_LINK_KIND_IDENTITY_HOP,
-						fmt.Sprintf("can read AWS credential file %s (profile %s)", file.GetPath(), profile.GetName()),
-						host.source, fmt.Sprintf("$.linux.credentialFiles[%d].awsProfiles[%d]", i, j)),
-					to: ident,
-				})
-			}
-		}
-	}
-	return hops, nil
-}
-
 // canRead reports whether a Linux user can read a file, from the file's
 // owner, group, and permission bits.
 func canRead(user *snapshotv1.LinuxUser, file *snapshotv1.CredentialFile) (bool, error) {
@@ -464,6 +440,13 @@ func canRead(user *snapshotv1.LinuxUser, file *snapshotv1.CredentialFile) (bool,
 	default:
 		return mode&0o004 != 0, nil
 	}
+}
+
+// bindingLink returns an Identity link: an Identity Binding with its origin.
+func bindingLink(origin analysisv1.BindingOrigin, label, source, location string) *analysisv1.Link {
+	l := link(analysisv1.LinkKind_LINK_KIND_IDENTITY, label, source, location)
+	l.Origin = origin
+	return l
 }
 
 func link(kind analysisv1.LinkKind, label, source, location string) *analysisv1.Link {

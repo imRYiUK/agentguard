@@ -19,7 +19,8 @@
             "source": "snapshots/linux.json",
             "location": "$.linux.agentUser"
           },
-          "confidence": "CONFIDENCE_HIGH"
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
         },
         {
           "kind": "LINK_KIND_IDENTITY_HOP",
@@ -37,7 +38,8 @@
             "source": "snapshots/aws.json",
             "location": "$.aws.identities[0]"
           },
-          "confidence": "CONFIDENCE_HIGH"
+          "confidence": "CONFIDENCE_HIGH",
+          "origin": "BINDING_ORIGIN_DISCOVERED"
         },
         {
           "kind": "LINK_KIND_NATIVE_PERMISSION",

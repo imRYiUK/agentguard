@@ -60,6 +60,21 @@ message Link {
   Confidence confidence = 4;
   // Why the confidence is reduced. Empty when it is high.
   string confidence_reason = 5;
+  // For an Identity link: where the Identity Binding comes from. Unspecified
+  // for every other kind of link.
+  BindingOrigin origin = 6;
+}
+
+// Where an Identity Binding comes from.
+enum BindingOrigin {
+  BINDING_ORIGIN_UNSPECIFIED = 0;
+  // Stated by the user, for example in the Agent Manifest.
+  BINDING_ORIGIN_DECLARED = 1;
+  // Observed directly in evidence, such as a credential file or the user the
+  // agent runs as.
+  BINDING_ORIGIN_DISCOVERED = 2;
+  // Derived indirectly from other facts, so it carries lower confidence.
+  BINDING_ORIGIN_INFERRED = 3;
 }
 
 // The evidence behind a link.
@@ -97,4 +112,7 @@ enum SecondaryFindingKind {
   // A policy statement that allows every action, or every action of a
   // service on every resource.
   SECONDARY_FINDING_KIND_WILDCARD_POLICY = 3;
+  // A Declared Binding in the Agent Manifest that contradicts what the
+  // evidence shows. Its evidence is the Declared Binding.
+  SECONDARY_FINDING_KIND_BINDING_MISMATCH = 4;
 }
