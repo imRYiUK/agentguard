@@ -60,13 +60,20 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	filesystem, err := agentconfig.BroadFilesystemTools(configFiles(mcpConfigs), configFiles(settings))
+	if err != nil {
+		return nil, err
+	}
 	linux, aws, err := readSnapshots(in.Files, m.Environments)
 	if err != nil {
 		return nil, err
 	}
 
 	budget := awspolicy.NewBudget(limits.MaxPolicyEvalSteps)
-	result := &analysisv1.AnalysisResult{}
+	result := &analysisv1.AnalysisResult{
+		ImpactMappingVersion: impacts.Version,
+		SecondaryFindings:    secondaryFindings(m.Agent.Name, tools, filesystem, aws),
+	}
 	for _, tool := range tools {
 		toolLink := link(analysisv1.LinkKind_LINK_KIND_TOOL,
 			fmt.Sprintf("shell Tool (MCP server %s)", tool.Server), tool.Source, tool.Location)
@@ -197,7 +204,7 @@ type awsIdentity struct {
 }
 
 // permission is one Native Permission of an Identity with the Impact
-// attached to it.
+// attached to it, or the unknown Impact when no mapping names it.
 type permission struct {
 	link   *analysisv1.Link
 	impact *analysisv1.Link
@@ -284,36 +291,98 @@ func readAWSIdentity(source, location string, id *snapshotv1.AwsIdentity) (*awsI
 	return ident, nil
 }
 
-// permissions returns the Native Permissions the Identity has that an Impact
-// mapping names, each with its Impact. It evaluates all the Identity's
-// policies together, so an explicit Deny in one removes an Allow in another.
+// permissions returns the Native Permissions the Identity has, each with an
+// Impact. A permission gets one entry per Impact the mapping table attaches to
+// the actions it covers, or a single entry with the unknown Impact when the
+// table names none of them. It evaluates all the Identity's policies together,
+// so an explicit Deny in one removes an Allow in another.
 func (a *awsIdentity) permissions(impacts *impact.Table, budget *awspolicy.Budget) ([]permission, error) {
 	if a.evaluated {
 		return a.perms, nil
 	}
+	fail := func(err error) ([]permission, error) {
+		return nil, fmt.Errorf("%s: %s: %w", a.source, a.location, err)
+	}
+
+	// found collects, for each Native Permission, the Impacts the table gives
+	// it, in table order. An Impact reached through several mapped actions
+	// is kept once, from the grant with the most confidence.
+	type permissionKey struct {
+		statement        *awspolicy.Statement
+		action, resource string
+	}
+	type found struct {
+		impact  string
+		mapping int
+		grant   awspolicy.Grant
+	}
+	foundFor := map[permissionKey][]found{}
 	for i, mapping := range impacts.Mappings {
 		grants, err := awspolicy.Evaluate(a.statements, mapping.Action, budget)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %s: %w", a.source, a.location, err)
+			return fail(err)
 		}
 		for _, g := range grants {
-			permLink := link(analysisv1.LinkKind_LINK_KIND_NATIVE_PERMISSION,
-				"Allow "+grantAction(g)+" on "+grantResource(g),
-				a.source, a.policyLocations[g.Statement.Policy]+strings.TrimPrefix(g.Statement.Location, "$"))
-			if g.Conditional {
-				permLink.Confidence = analysisv1.Confidence_CONFIDENCE_REDUCED
-				permLink.ConfidenceReason = g.Reason
+			// An action only reaches the resources of its own service.
+			if !awspolicy.ResourceInService(g.Resource, mapping.Service(), budget) {
+				continue
 			}
-			for _, m := range impacts.Matches(i) {
-				a.perms = append(a.perms, permission{
-					link:   permLink,
-					impact: link(analysisv1.LinkKind_LINK_KIND_IMPACT, m.Impact, m.Source, m.Location),
-				})
+			key := permissionKey{g.Statement, g.Action, g.Resource}
+			for _, imp := range mapping.Impacts {
+				at := slices.IndexFunc(foundFor[key], func(f found) bool { return f.impact == imp })
+				switch {
+				case at < 0:
+					foundFor[key] = append(foundFor[key], found{imp, i, g})
+				case foundFor[key][at].grant.Conditional && !g.Conditional:
+					foundFor[key][at] = found{imp, i, g}
+				}
 			}
+		}
+	}
+
+	granted, err := awspolicy.Permissions(a.statements, budget)
+	if err != nil {
+		return fail(err)
+	}
+	if err := budget.Err(); err != nil {
+		return fail(err)
+	}
+	for _, g := range granted {
+		fs := foundFor[permissionKey{g.Statement, g.Action, g.Resource}]
+		if len(fs) == 0 {
+			a.perms = append(a.perms, permission{
+				link:   a.permissionLink(g),
+				impact: link(analysisv1.LinkKind_LINK_KIND_IMPACT, impact.Unknown, impacts.Source(), impact.NoMappingLocation),
+			})
+			continue
+		}
+		for _, f := range fs {
+			a.perms = append(a.perms, permission{
+				link:   a.permissionLink(f.grant),
+				impact: link(analysisv1.LinkKind_LINK_KIND_IMPACT, f.impact, impacts.Source(), impacts.Location(f.mapping)),
+			})
 		}
 	}
 	a.evaluated = true
 	return a.perms, nil
+}
+
+// statementLocation is the JSONPath in the Snapshot of a statement of one of
+// the Identity's policies.
+func (a *awsIdentity) statementLocation(st *awspolicy.Statement) string {
+	return a.policyLocations[st.Policy] + strings.TrimPrefix(st.Location, "$")
+}
+
+// permissionLink returns the Native Permission link of a Grant.
+func (a *awsIdentity) permissionLink(g awspolicy.Grant) *analysisv1.Link {
+	l := link(analysisv1.LinkKind_LINK_KIND_NATIVE_PERMISSION,
+		"Allow "+grantAction(g)+" on "+grantResource(g),
+		a.source, a.statementLocation(g.Statement))
+	if g.Conditional {
+		l.Confidence = analysisv1.Confidence_CONFIDENCE_REDUCED
+		l.ConfidenceReason = g.Reason
+	}
+	return l
 }
 
 // grantAction describes the actions a Grant allows, as the policy states them.

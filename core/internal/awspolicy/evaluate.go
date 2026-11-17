@@ -3,6 +3,7 @@ package awspolicy
 import (
 	"errors"
 	"slices"
+	"strings"
 
 	"github.com/imRYiUK/agentguard/core/internal/limits"
 )
@@ -26,6 +27,16 @@ func (b *Budget) spend() bool {
 	}
 	b.left--
 	return true
+}
+
+// Err returns ErrBudgetExhausted once an operation has run out of the Budget.
+// Matching that runs out of steps answers "no", so a caller that matches
+// outside Evaluate and Permissions checks Err afterwards.
+func (b *Budget) Err() error {
+	if b.exhausted {
+		return ErrBudgetExhausted
+	}
+	return nil
 }
 
 // ErrBudgetExhausted is returned when an evaluation needs more work than its
@@ -70,14 +81,10 @@ func Evaluate(statements []Statement, action string, budget *Budget) ([]Grant, e
 		if !ok {
 			continue
 		}
-		resources := st.Resources
-		if len(st.NotResources) > 0 {
-			resources = []string{""}
-		}
-		for _, resource := range resources {
+		for _, resource := range grantResources(st) {
 			g := Grant{Statement: st, Action: pattern, Resource: resource}
 			if st.Conditional {
-				g.Conditional, g.Reason = true, reasonAllowCondition
+				g.Conditional, g.Reason = true, ReasonAllowCondition
 			}
 			if removeOrQualify(&g, statements, action, budget) {
 				continue
@@ -89,6 +96,91 @@ func Evaluate(statements []Statement, action string, budget *Budget) ([]Grant, e
 		return nil, ErrBudgetExhausted
 	}
 	return grants, nil
+}
+
+// Permissions returns every Native Permission the Allow statements grant: one
+// Grant for each Action entry and Resource entry of each statement, in
+// statement order, leaving out those an explicit Deny provably covers. A
+// statement with NotAction is one Grant for all the actions it allows. It
+// answers what an Identity is granted, where Evaluate answers whether it is
+// granted one given action. A nil budget is a fresh one of
+// limits.MaxPolicyEvalSteps.
+func Permissions(statements []Statement, budget *Budget) ([]Grant, error) {
+	if budget == nil {
+		budget = NewBudget(limits.MaxPolicyEvalSteps)
+	}
+	var grants []Grant
+	for i := range statements {
+		st := &statements[i]
+		if st.Effect != Allow {
+			continue
+		}
+		// An Action entry is the action asked about. A NotAction statement
+		// stands for all actions, so a Deny must cover them all to remove it.
+		entries := st.Actions
+		if len(st.NotActions) > 0 {
+			entries = []string{""}
+		}
+		for _, entry := range entries {
+			asked := entry
+			if asked == "" {
+				asked = "*"
+			}
+			for _, resource := range grantResources(st) {
+				g := Grant{Statement: st, Action: entry, Resource: resource}
+				if st.Conditional {
+					g.Conditional, g.Reason = true, ReasonAllowCondition
+				}
+				if removeOrQualify(&g, statements, asked, budget) {
+					continue
+				}
+				grants = append(grants, g)
+			}
+		}
+	}
+	if budget.exhausted {
+		return nil, ErrBudgetExhausted
+	}
+	return grants, nil
+}
+
+// grantResources returns the Resource entries a statement grants. A statement
+// with NotResource grants every resource but some, which is one entry with no
+// pattern.
+func grantResources(st *Statement) []string {
+	if len(st.NotResources) > 0 {
+		return []string{""}
+	}
+	return st.Resources
+}
+
+// ResourceInService reports whether a Grant's resource can be a resource of
+// the AWS service, judging by the service part of its ARN. An empty resource,
+// which stands for every resource but some, and any resource whose ARN
+// wildcards could hide the service are in every service. A nil budget is a
+// fresh one of limits.MaxPolicyEvalSteps.
+func ResourceInService(resource, service string, budget *Budget) bool {
+	if resource == "" {
+		return true
+	}
+	if budget == nil {
+		budget = NewBudget(limits.MaxPolicyEvalSteps)
+	}
+	parts := strings.Split(resource, ":")
+	// A * can match colons, so a wildcard before the service part can stand
+	// for any number of ARN parts.
+	if hasWildcard(parts[0]) || (len(parts) > 1 && hasWildcard(parts[1])) {
+		return true
+	}
+	if parts[0] != "arn" {
+		return false
+	}
+	// A full ARN has six parts. A shorter one is only a resource if a
+	// wildcard at its end can stand for the rest.
+	if len(parts) < 6 {
+		return hasWildcard(parts[len(parts)-1])
+	}
+	return covers(parts[2], service, true, budget)
 }
 
 // allowedBy reports whether an Allow statement covers the action, and the
@@ -114,7 +206,7 @@ func allowedBy(st *Statement, action string, b *Budget) (string, bool) {
 
 // The reasons a Grant is Conditional.
 const (
-	reasonAllowCondition = "the Allow statement has a Condition, which AgentGuard does not evaluate"
+	ReasonAllowCondition = "the Allow statement has a Condition, which AgentGuard does not evaluate"
 	reasonDenyCondition  = "a Deny statement with a Condition may remove it, and AgentGuard does not evaluate Conditions"
 )
 

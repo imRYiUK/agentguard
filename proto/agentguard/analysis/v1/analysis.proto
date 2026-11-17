@@ -6,6 +6,11 @@ package agentguard.analysis.v1;
 message AnalysisResult {
   // Reach Paths found, in a deterministic order.
   repeated ReachPath reach_paths = 1;
+  // Version of the Impact mapping table the Impacts were attached with.
+  string impact_mapping_version = 2;
+  // Single-layer issues found, in a deterministic order. They are reported
+  // whether or not a Reach Path exists.
+  repeated SecondaryFinding secondary_findings = 3;
 }
 
 // An evidence-backed chain from an Agent Deployment through a Tool and an
@@ -63,4 +68,33 @@ message Evidence {
   string source = 1;
   // Location inside the source, as a JSONPath.
   string location = 2;
+}
+
+// A Secondary Finding is a single-layer issue: one Tool, policy, or configuration that is risky on
+// its own, without a full chain to an Impact.
+message SecondaryFinding {
+  SecondaryFindingKind kind = 1;
+  // Name of the Agent Deployment the finding belongs to.
+  string agent_deployment = 2;
+  // Human-readable description of the issue.
+  string label = 3;
+  // Where the issue is.
+  Evidence evidence = 4;
+  // How far to trust the finding.
+  Confidence confidence = 5;
+  // Why the confidence is reduced. Empty when it is high.
+  string confidence_reason = 6;
+}
+
+// The kind of a Secondary Finding.
+enum SecondaryFindingKind {
+  SECONDARY_FINDING_KIND_UNSPECIFIED = 0;
+  // A Tool that gives the agent unrestricted command execution.
+  SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION = 1;
+  // A Tool that gives the agent filesystem access to a broad part of the
+  // host, such as the root directory or a home directory.
+  SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS = 2;
+  // A policy statement that allows every action, or every action of a
+  // service on every resource.
+  SECONDARY_FINDING_KIND_WILDCARD_POLICY = 3;
 }

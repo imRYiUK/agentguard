@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "files": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/srv/app",
+        "/"
+      ]
+    },
+    "shell": {
+      "command": "uvx",
+      "args": [
+        "mcp-shell-server"
+      ]
+    }
+  }
+}

@@ -1,9 +1,213 @@
 {
-  "version": "1",
+  "version": "2",
   "mappings": [
     {
-      "action": "s3:*",
-      "impacts": ["Destroy Data"]
+      "action": "s3:GetObject",
+      "impacts": [
+        "Read Data"
+      ],
+      "rationale": "Returns the contents of an object."
+    },
+    {
+      "action": "s3:GetObjectVersion",
+      "impacts": [
+        "Read Data"
+      ],
+      "rationale": "Returns the contents of an earlier version of an object."
+    },
+    {
+      "action": "s3:PutObject",
+      "impacts": [
+        "Modify Data"
+      ],
+      "rationale": "Creates or overwrites an object."
+    },
+    {
+      "action": "s3:DeleteObject",
+      "impacts": [
+        "Destroy Data"
+      ],
+      "rationale": "Removes an object."
+    },
+    {
+      "action": "s3:DeleteObjectVersion",
+      "impacts": [
+        "Destroy Data"
+      ],
+      "rationale": "Permanently removes one version of an object, which versioning would otherwise keep."
+    },
+    {
+      "action": "s3:DeleteBucket",
+      "impacts": [
+        "Destroy Data"
+      ],
+      "rationale": "Removes an empty bucket."
+    },
+    {
+      "action": "s3:PutLifecycleConfiguration",
+      "impacts": [
+        "Destroy Data"
+      ],
+      "rationale": "Can set rules that expire every object in the bucket."
+    },
+    {
+      "action": "s3:PutBucketPolicy",
+      "impacts": [
+        "Exfiltrate"
+      ],
+      "rationale": "Can grant other principals, or the public, access to the bucket's data."
+    },
+    {
+      "action": "s3:PutBucketAcl",
+      "impacts": [
+        "Exfiltrate"
+      ],
+      "rationale": "Can grant other principals, or the public, access to the bucket's data."
+    },
+    {
+      "action": "s3:PutObjectAcl",
+      "impacts": [
+        "Exfiltrate"
+      ],
+      "rationale": "Can grant other principals, or the public, access to an object."
+    },
+    {
+      "action": "iam:PassRole",
+      "impacts": [
+        "Escalate Privilege"
+      ],
+      "rationale": "Lets the caller hand a role's permissions to a resource it controls."
+    },
+    {
+      "action": "iam:CreateAccessKey",
+      "impacts": [
+        "Escalate Privilege"
+      ],
+      "rationale": "Creates credentials for another user, which lets the caller act as that user."
+    },
+    {
+      "action": "iam:CreateLoginProfile",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Sets a console password for a user, which lets the caller sign in as that user."
+    },
+    {
+      "action": "iam:UpdateLoginProfile",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Changes a user's console password, which lets the caller sign in as that user."
+    },
+    {
+      "action": "iam:CreatePolicyVersion",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Can rewrite a policy that is already attached to Identities."
+    },
+    {
+      "action": "iam:SetDefaultPolicyVersion",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Can switch an attached policy to a more permissive version."
+    },
+    {
+      "action": "iam:AttachUserPolicy",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Attaches a policy to a user, including a more permissive one."
+    },
+    {
+      "action": "iam:AttachGroupPolicy",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Attaches a policy to a group, including a more permissive one."
+    },
+    {
+      "action": "iam:AttachRolePolicy",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Attaches a policy to a role, including a more permissive one."
+    },
+    {
+      "action": "iam:PutUserPolicy",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Writes an inline policy on a user."
+    },
+    {
+      "action": "iam:PutGroupPolicy",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Writes an inline policy on a group."
+    },
+    {
+      "action": "iam:PutRolePolicy",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Writes an inline policy on a role."
+    },
+    {
+      "action": "iam:AddUserToGroup",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Gives a user the permissions of a group."
+    },
+    {
+      "action": "iam:UpdateAssumeRolePolicy",
+      "impacts": [
+        "Escalate Privilege",
+        "Modify Identity"
+      ],
+      "rationale": "Changes who can assume a role."
+    },
+    {
+      "action": "iam:CreateUser",
+      "impacts": [
+        "Modify Identity"
+      ],
+      "rationale": "Creates a new Identity."
+    },
+    {
+      "action": "iam:CreateRole",
+      "impacts": [
+        "Modify Identity"
+      ],
+      "rationale": "Creates a new Identity."
+    },
+    {
+      "action": "iam:DeleteUser",
+      "impacts": [
+        "Modify Identity"
+      ],
+      "rationale": "Removes an Identity."
+    },
+    {
+      "action": "iam:DeleteRole",
+      "impacts": [
+        "Modify Identity"
+      ],
+      "rationale": "Removes an Identity."
     }
   ]
 }

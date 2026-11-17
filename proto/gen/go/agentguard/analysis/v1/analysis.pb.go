@@ -138,13 +138,76 @@ func (LinkKind) EnumDescriptor() ([]byte, []int) {
 	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{1}
 }
 
+// The kind of a Secondary Finding.
+type SecondaryFindingKind int32
+
+const (
+	SecondaryFindingKind_SECONDARY_FINDING_KIND_UNSPECIFIED SecondaryFindingKind = 0
+	// A Tool that gives the agent unrestricted command execution.
+	SecondaryFindingKind_SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION SecondaryFindingKind = 1
+	// A Tool that gives the agent filesystem access to a broad part of the
+	// host, such as the root directory or a home directory.
+	SecondaryFindingKind_SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS SecondaryFindingKind = 2
+	// A policy statement that allows every action, or every action of a
+	// service on every resource.
+	SecondaryFindingKind_SECONDARY_FINDING_KIND_WILDCARD_POLICY SecondaryFindingKind = 3
+)
+
+// Enum value maps for SecondaryFindingKind.
+var (
+	SecondaryFindingKind_name = map[int32]string{
+		0: "SECONDARY_FINDING_KIND_UNSPECIFIED",
+		1: "SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION",
+		2: "SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS",
+		3: "SECONDARY_FINDING_KIND_WILDCARD_POLICY",
+	}
+	SecondaryFindingKind_value = map[string]int32{
+		"SECONDARY_FINDING_KIND_UNSPECIFIED":                    0,
+		"SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION": 1,
+		"SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS":        2,
+		"SECONDARY_FINDING_KIND_WILDCARD_POLICY":                3,
+	}
+)
+
+func (x SecondaryFindingKind) Enum() *SecondaryFindingKind {
+	p := new(SecondaryFindingKind)
+	*p = x
+	return p
+}
+
+func (x SecondaryFindingKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SecondaryFindingKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[2].Descriptor()
+}
+
+func (SecondaryFindingKind) Type() protoreflect.EnumType {
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[2]
+}
+
+func (x SecondaryFindingKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SecondaryFindingKind.Descriptor instead.
+func (SecondaryFindingKind) EnumDescriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{2}
+}
+
 // The result of one analysis of an Agent Deployment.
 type AnalysisResult struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Reach Paths found, in a deterministic order.
-	ReachPaths    []*ReachPath `protobuf:"bytes,1,rep,name=reach_paths,json=reachPaths,proto3" json:"reach_paths,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ReachPaths []*ReachPath `protobuf:"bytes,1,rep,name=reach_paths,json=reachPaths,proto3" json:"reach_paths,omitempty"`
+	// Version of the Impact mapping table the Impacts were attached with.
+	ImpactMappingVersion string `protobuf:"bytes,2,opt,name=impact_mapping_version,json=impactMappingVersion,proto3" json:"impact_mapping_version,omitempty"`
+	// Single-layer issues found, in a deterministic order. They are reported
+	// whether or not a Reach Path exists.
+	SecondaryFindings []*SecondaryFinding `protobuf:"bytes,3,rep,name=secondary_findings,json=secondaryFindings,proto3" json:"secondary_findings,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *AnalysisResult) Reset() {
@@ -180,6 +243,20 @@ func (*AnalysisResult) Descriptor() ([]byte, []int) {
 func (x *AnalysisResult) GetReachPaths() []*ReachPath {
 	if x != nil {
 		return x.ReachPaths
+	}
+	return nil
+}
+
+func (x *AnalysisResult) GetImpactMappingVersion() string {
+	if x != nil {
+		return x.ImpactMappingVersion
+	}
+	return ""
+}
+
+func (x *AnalysisResult) GetSecondaryFindings() []*SecondaryFinding {
+	if x != nil {
+		return x.SecondaryFindings
 	}
 	return nil
 }
@@ -385,14 +462,107 @@ func (x *Evidence) GetLocation() string {
 	return ""
 }
 
+// A Secondary Finding is a single-layer issue: one Tool, policy, or configuration that is risky on
+// its own, without a full chain to an Impact.
+type SecondaryFinding struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Kind  SecondaryFindingKind   `protobuf:"varint,1,opt,name=kind,proto3,enum=agentguard.analysis.v1.SecondaryFindingKind" json:"kind,omitempty"`
+	// Name of the Agent Deployment the finding belongs to.
+	AgentDeployment string `protobuf:"bytes,2,opt,name=agent_deployment,json=agentDeployment,proto3" json:"agent_deployment,omitempty"`
+	// Human-readable description of the issue.
+	Label string `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	// Where the issue is.
+	Evidence *Evidence `protobuf:"bytes,4,opt,name=evidence,proto3" json:"evidence,omitempty"`
+	// How far to trust the finding.
+	Confidence Confidence `protobuf:"varint,5,opt,name=confidence,proto3,enum=agentguard.analysis.v1.Confidence" json:"confidence,omitempty"`
+	// Why the confidence is reduced. Empty when it is high.
+	ConfidenceReason string `protobuf:"bytes,6,opt,name=confidence_reason,json=confidenceReason,proto3" json:"confidence_reason,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *SecondaryFinding) Reset() {
+	*x = SecondaryFinding{}
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SecondaryFinding) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SecondaryFinding) ProtoMessage() {}
+
+func (x *SecondaryFinding) ProtoReflect() protoreflect.Message {
+	mi := &file_agentguard_analysis_v1_analysis_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SecondaryFinding.ProtoReflect.Descriptor instead.
+func (*SecondaryFinding) Descriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SecondaryFinding) GetKind() SecondaryFindingKind {
+	if x != nil {
+		return x.Kind
+	}
+	return SecondaryFindingKind_SECONDARY_FINDING_KIND_UNSPECIFIED
+}
+
+func (x *SecondaryFinding) GetAgentDeployment() string {
+	if x != nil {
+		return x.AgentDeployment
+	}
+	return ""
+}
+
+func (x *SecondaryFinding) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *SecondaryFinding) GetEvidence() *Evidence {
+	if x != nil {
+		return x.Evidence
+	}
+	return nil
+}
+
+func (x *SecondaryFinding) GetConfidence() Confidence {
+	if x != nil {
+		return x.Confidence
+	}
+	return Confidence_CONFIDENCE_UNSPECIFIED
+}
+
+func (x *SecondaryFinding) GetConfidenceReason() string {
+	if x != nil {
+		return x.ConfidenceReason
+	}
+	return ""
+}
+
 var File_agentguard_analysis_v1_analysis_proto protoreflect.FileDescriptor
 
 const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\n" +
-	"%agentguard/analysis/v1/analysis.proto\x12\x16agentguard.analysis.v1\"T\n" +
+	"%agentguard/analysis/v1/analysis.proto\x12\x16agentguard.analysis.v1\"\xe3\x01\n" +
 	"\x0eAnalysisResult\x12B\n" +
 	"\vreach_paths\x18\x01 \x03(\v2!.agentguard.analysis.v1.ReachPathR\n" +
-	"reachPaths\"\xae\x01\n" +
+	"reachPaths\x124\n" +
+	"\x16impact_mapping_version\x18\x02 \x01(\tR\x14impactMappingVersion\x12W\n" +
+	"\x12secondary_findings\x18\x03 \x03(\v2(.agentguard.analysis.v1.SecondaryFindingR\x11secondaryFindings\"\xae\x01\n" +
 	"\tReachPath\x12)\n" +
 	"\x10agent_deployment\x18\x01 \x01(\tR\x0fagentDeployment\x122\n" +
 	"\x05links\x18\x02 \x03(\v2\x1c.agentguard.analysis.v1.LinkR\x05links\x12B\n" +
@@ -409,7 +579,16 @@ const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\x11confidence_reason\x18\x05 \x01(\tR\x10confidenceReason\">\n" +
 	"\bEvidence\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation*U\n" +
+	"\blocation\x18\x02 \x01(\tR\blocation\"\xc4\x02\n" +
+	"\x10SecondaryFinding\x12@\n" +
+	"\x04kind\x18\x01 \x01(\x0e2,.agentguard.analysis.v1.SecondaryFindingKindR\x04kind\x12)\n" +
+	"\x10agent_deployment\x18\x02 \x01(\tR\x0fagentDeployment\x12\x14\n" +
+	"\x05label\x18\x03 \x01(\tR\x05label\x12<\n" +
+	"\bevidence\x18\x04 \x01(\v2 .agentguard.analysis.v1.EvidenceR\bevidence\x12B\n" +
+	"\n" +
+	"confidence\x18\x05 \x01(\x0e2\".agentguard.analysis.v1.ConfidenceR\n" +
+	"confidence\x12+\n" +
+	"\x11confidence_reason\x18\x06 \x01(\tR\x10confidenceReason*U\n" +
 	"\n" +
 	"Confidence\x12\x1a\n" +
 	"\x16CONFIDENCE_UNSPECIFIED\x10\x00\x12\x13\n" +
@@ -421,7 +600,12 @@ const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"\x12LINK_KIND_IDENTITY\x10\x02\x12\x1a\n" +
 	"\x16LINK_KIND_IDENTITY_HOP\x10\x03\x12\x1f\n" +
 	"\x1bLINK_KIND_NATIVE_PERMISSION\x10\x04\x12\x14\n" +
-	"\x10LINK_KIND_IMPACT\x10\x05B\xf3\x01\n" +
+	"\x10LINK_KIND_IMPACT\x10\x05*\xd9\x01\n" +
+	"\x14SecondaryFindingKind\x12&\n" +
+	"\"SECONDARY_FINDING_KIND_UNSPECIFIED\x10\x00\x129\n" +
+	"5SECONDARY_FINDING_KIND_UNRESTRICTED_COMMAND_EXECUTION\x10\x01\x122\n" +
+	".SECONDARY_FINDING_KIND_BROAD_FILESYSTEM_ACCESS\x10\x02\x12*\n" +
+	"&SECONDARY_FINDING_KIND_WILDCARD_POLICY\x10\x03B\xf3\x01\n" +
 	"\x1acom.agentguard.analysis.v1B\rAnalysisProtoP\x01ZLgithub.com/imRYiUK/agentguard/proto/gen/go/agentguard/analysis/v1;analysisv1\xa2\x02\x03AAX\xaa\x02\x16Agentguard.Analysis.V1\xca\x02\x16Agentguard\\Analysis\\V1\xe2\x02\"Agentguard\\Analysis\\V1\\GPBMetadata\xea\x02\x18Agentguard::Analysis::V1b\x06proto3"
 
 var (
@@ -436,28 +620,34 @@ func file_agentguard_analysis_v1_analysis_proto_rawDescGZIP() []byte {
 	return file_agentguard_analysis_v1_analysis_proto_rawDescData
 }
 
-var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_agentguard_analysis_v1_analysis_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_agentguard_analysis_v1_analysis_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_agentguard_analysis_v1_analysis_proto_goTypes = []any{
-	(Confidence)(0),        // 0: agentguard.analysis.v1.Confidence
-	(LinkKind)(0),          // 1: agentguard.analysis.v1.LinkKind
-	(*AnalysisResult)(nil), // 2: agentguard.analysis.v1.AnalysisResult
-	(*ReachPath)(nil),      // 3: agentguard.analysis.v1.ReachPath
-	(*Link)(nil),           // 4: agentguard.analysis.v1.Link
-	(*Evidence)(nil),       // 5: agentguard.analysis.v1.Evidence
+	(Confidence)(0),           // 0: agentguard.analysis.v1.Confidence
+	(LinkKind)(0),             // 1: agentguard.analysis.v1.LinkKind
+	(SecondaryFindingKind)(0), // 2: agentguard.analysis.v1.SecondaryFindingKind
+	(*AnalysisResult)(nil),    // 3: agentguard.analysis.v1.AnalysisResult
+	(*ReachPath)(nil),         // 4: agentguard.analysis.v1.ReachPath
+	(*Link)(nil),              // 5: agentguard.analysis.v1.Link
+	(*Evidence)(nil),          // 6: agentguard.analysis.v1.Evidence
+	(*SecondaryFinding)(nil),  // 7: agentguard.analysis.v1.SecondaryFinding
 }
 var file_agentguard_analysis_v1_analysis_proto_depIdxs = []int32{
-	3, // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
-	4, // 1: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
-	0, // 2: agentguard.analysis.v1.ReachPath.confidence:type_name -> agentguard.analysis.v1.Confidence
-	1, // 3: agentguard.analysis.v1.Link.kind:type_name -> agentguard.analysis.v1.LinkKind
-	5, // 4: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
-	0, // 5: agentguard.analysis.v1.Link.confidence:type_name -> agentguard.analysis.v1.Confidence
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	4,  // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
+	7,  // 1: agentguard.analysis.v1.AnalysisResult.secondary_findings:type_name -> agentguard.analysis.v1.SecondaryFinding
+	5,  // 2: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
+	0,  // 3: agentguard.analysis.v1.ReachPath.confidence:type_name -> agentguard.analysis.v1.Confidence
+	1,  // 4: agentguard.analysis.v1.Link.kind:type_name -> agentguard.analysis.v1.LinkKind
+	6,  // 5: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
+	0,  // 6: agentguard.analysis.v1.Link.confidence:type_name -> agentguard.analysis.v1.Confidence
+	2,  // 7: agentguard.analysis.v1.SecondaryFinding.kind:type_name -> agentguard.analysis.v1.SecondaryFindingKind
+	6,  // 8: agentguard.analysis.v1.SecondaryFinding.evidence:type_name -> agentguard.analysis.v1.Evidence
+	0,  // 9: agentguard.analysis.v1.SecondaryFinding.confidence:type_name -> agentguard.analysis.v1.Confidence
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_agentguard_analysis_v1_analysis_proto_init() }
@@ -470,8 +660,8 @@ func file_agentguard_analysis_v1_analysis_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentguard_analysis_v1_analysis_proto_rawDesc), len(file_agentguard_analysis_v1_analysis_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   4,
+			NumEnums:      3,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

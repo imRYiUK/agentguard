@@ -433,3 +433,114 @@ func TestHostilePatternsCannotRunAwayWithTheCPU(t *testing.T) {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
+
+// permissions returns the described Native Permissions the documents grant.
+func permissions(t *testing.T, docs ...string) []string {
+	t.Helper()
+	grants, err := awspolicy.Permissions(statements(t, docs...), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out []string
+	for _, g := range grants {
+		out = append(out, describe(g))
+	}
+	return out
+}
+
+func TestPermissionsListsEveryActionAndResourceAnAllowGrants(t *testing.T) {
+	assertGrants(t, permissions(t, allow("s3:GetObject,ec2:RunInstances", "arn:aws:s3:::a,arn:aws:s3:::b")),
+		"s3:GetObject on arn:aws:s3:::a", "s3:GetObject on arn:aws:s3:::b",
+		"ec2:RunInstances on arn:aws:s3:::a", "ec2:RunInstances on arn:aws:s3:::b")
+	assertGrants(t, permissions(t, allow("*", "*"), allow("iam:PassRole", "*")), "* on *", "iam:PassRole on *")
+}
+
+func TestPermissionsLeavesOutWhatADenyRemoves(t *testing.T) {
+	assertGrants(t, permissions(t, allow("s3:GetObject,s3:PutObject", "*"), deny("s3:PutObject", "*")), "s3:GetObject on *")
+	assertGrants(t, permissions(t, allow("s3:*", "*"), deny("*", "*")))
+	// A Deny of only part of the permission leaves it in place.
+	assertGrants(t, permissions(t, allow("s3:*", "*"), deny("s3:DeleteBucket", "*")), "s3:* on *")
+	assertGrants(t, permissions(t, allow("s3:*", "*"), deny("s3:*", "arn:aws:s3:::audit")), "s3:* on *")
+}
+
+func TestPermissionsOfANotActionAllowIsOneWholePermission(t *testing.T) {
+	doc := statement(`"Effect":"Allow","NotAction":["iam:*"],"Resource":"*"`)
+	assertGrants(t, permissions(t, doc), "all except iam:* on *")
+	assertGrants(t, permissions(t, doc, deny("*", "*")))
+	assertGrants(t, permissions(t, doc, deny("s3:*", "*")), "all except iam:* on *")
+}
+
+func TestPermissionsMarksConditionalGrants(t *testing.T) {
+	cond := statement(`"Effect":"Allow","Action":"ec2:RunInstances","Resource":"*","Condition":{"Bool":{"aws:SecureTransport":"true"}}`)
+	assertGrants(t, permissions(t, cond), "ec2:RunInstances on * [conditional]")
+	condDeny := statement(`"Effect":"Deny","Action":"ec2:*","Resource":"*","Condition":{"Bool":{"aws:SecureTransport":"false"}}`)
+	assertGrants(t, permissions(t, allow("ec2:RunInstances", "*"), condDeny), "ec2:RunInstances on * [conditional]")
+}
+
+func TestPermissionsStopsWhenItsBudgetIsGone(t *testing.T) {
+	_, err := awspolicy.Permissions(statements(t, allow("s3:*", "*"), deny("s3:*", "arn:aws:s3:::a")), awspolicy.NewBudget(1))
+	if !errors.Is(err, awspolicy.ErrBudgetExhausted) {
+		t.Errorf("want ErrBudgetExhausted, got %v", err)
+	}
+}
+
+func TestResourceInService(t *testing.T) {
+	tests := []struct {
+		resource, service string
+		want              bool
+	}{
+		{"*", "s3", true},
+		{"*", "iam", true},
+		{"arn:aws:s3:::prod-*", "s3", true},
+		{"arn:aws:s3:::prod-*", "iam", false},
+		{"arn:aws:s3:::prod-bucket/*", "s3", true},
+		{"arn:aws:iam::123456789012:role/ops", "iam", true},
+		{"arn:aws:iam::123456789012:role/ops", "s3", false},
+		{"arn:aws:*:::x", "s3", true},
+		{"arn:aws:s3*:::x", "s3", true},
+		{"arn:aws:i?m::123456789012:role/ops", "iam", true},
+		{"arn:aws:i?m::123456789012:role/ops", "s3", false},
+		{"arn:*", "s3", true},
+		{"arn:aws*", "iam", true},
+		{"*:s3:::x", "iam", true},
+		{"a*", "iam", true},
+		{"arn:aws-cn:s3:::x", "s3", true},
+		// The ARN of a resource of no service at all.
+		{"prod-bucket", "s3", false},
+		{"arn:aws:s3", "s3", false},
+		// A NotResource grant stands for every resource but some.
+		{"", "s3", true},
+		{"", "iam", true},
+		// IAM compares service names without regard to case.
+		{"arn:aws:S3:::x", "s3", true},
+	}
+	for _, tc := range tests {
+		if got := awspolicy.ResourceInService(tc.resource, tc.service, nil); got != tc.want {
+			t.Errorf("ResourceInService(%q, %q) = %v, want %v", tc.resource, tc.service, got, tc.want)
+		}
+	}
+}
+
+func TestStatementWildcard(t *testing.T) {
+	tests := []struct {
+		name, doc string
+		want      bool
+	}{
+		{"every action", allow("*", "arn:aws:s3:::a"), true},
+		{"a service's actions on every resource", allow("s3:*", "*"), true},
+		{"a service's actions among others", allow("s3:GetObject,iam:*", "*"), true},
+		{"a service's actions on a named resource", allow("s3:*", "arn:aws:s3:::a"), false},
+		{"named actions on every resource", allow("s3:Get*,s3:List*", "*"), false},
+		{"a Deny", deny("*", "*"), false},
+		{"every action but some", statement(`"Effect":"Allow","NotAction":["iam:*"],"Resource":"*"`), false},
+		{"a service's actions on every resource but some", statement(`"Effect":"Allow","Action":"s3:*","NotResource":["arn:aws:s3:::a"]`), false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			stmts := statements(t, tc.doc)
+			if got := stmts[0].Wildcard(); got != tc.want {
+				t.Errorf("Wildcard() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

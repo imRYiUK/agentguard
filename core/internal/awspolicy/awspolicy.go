@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -59,6 +60,21 @@ type Statement struct {
 	// zero. The caller sets it to tell apart the policies it evaluates
 	// together.
 	Policy int
+}
+
+// Wildcard reports whether the statement is a wildcard policy: an Allow of
+// every action, or of every action of a service on every resource. A
+// statement that allows by NotAction is not one, though it can grant as much.
+func (s *Statement) Wildcard() bool {
+	if s.Effect != Allow || len(s.NotActions) > 0 {
+		return false
+	}
+	for _, action := range s.Actions {
+		if action == "*" || (strings.HasSuffix(action, ":*") && slices.Contains(s.Resources, "*")) {
+			return true
+		}
+	}
+	return false
 }
 
 type document struct {

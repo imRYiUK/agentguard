@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // The fixed set of Impacts a mapping may name.
@@ -34,13 +35,9 @@ type Table struct {
 type Mapping struct {
 	Action  string   `json:"action"`
 	Impacts []string `json:"impacts"`
-}
-
-// Match is one Impact attached to an action, with where it was attached.
-type Match struct {
-	Impact   string
-	Source   string
-	Location string
+	// Rationale says why the action has these Impacts. Every mapping needs
+	// one, so a reviewer can check the mapping rather than trust it.
+	Rationale string `json:"rationale"`
 }
 
 // Default returns the mapping table shipped with AgentGuard.
@@ -59,15 +56,23 @@ func Default() (*Table, error) {
 	return &t, nil
 }
 
-// Matches returns the Impacts of the mapping at index i of the table.
-func (t *Table) Matches(i int) []Match {
-	var matches []Match
-	for _, imp := range t.Mappings[i].Impacts {
-		matches = append(matches, Match{
-			Impact:   imp,
-			Source:   "agentguard:impact-mappings/v" + t.Version,
-			Location: fmt.Sprintf("$.mappings[%d]", i),
-		})
-	}
-	return matches
+// Service returns the AWS service the mapping's action belongs to, such as
+// "s3" for "s3:GetObject".
+func (m Mapping) Service() string {
+	service, _, _ := strings.Cut(m.Action, ":")
+	return strings.ToLower(service)
 }
+
+// Source names the table in the evidence of an Impact, with its version.
+func (t *Table) Source() string { return "agentguard:impact-mappings/v" + t.Version }
+
+// Location is the JSONPath in the table of the mapping at index i.
+func (t *Table) Location(i int) string { return fmt.Sprintf("$.mappings[%d]", i) }
+
+// NoMappingLocation is the JSONPath in the table that evidence for an Impact
+// of "unknown" points at: the whole list of mappings, none of which names the
+// permission.
+const NoMappingLocation = "$.mappings"
+
+// Unknown is the Impact of a Native Permission that no mapping names.
+const Unknown = "unknown"

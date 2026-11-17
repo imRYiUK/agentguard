@@ -74,8 +74,13 @@ environments:`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result.ReachPaths) != 1 || result.ReachPaths[0].AgentDeployment != "deploy-agent" {
-		t.Errorf("want the deploy-agent Reach Path, got %v", result.ReachPaths)
+	if len(result.ReachPaths) == 0 {
+		t.Fatal("want Reach Paths, got none")
+	}
+	for _, p := range result.ReachPaths {
+		if p.AgentDeployment != "deploy-agent" {
+			t.Errorf("want Reach Paths of deploy-agent, got %v", p)
+		}
 	}
 }
 
