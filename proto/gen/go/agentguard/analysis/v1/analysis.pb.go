@@ -21,6 +21,59 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// How far to trust a link or a path.
+type Confidence int32
+
+const (
+	Confidence_CONFIDENCE_UNSPECIFIED Confidence = 0
+	// Every fact behind it was evaluated.
+	Confidence_CONFIDENCE_HIGH Confidence = 1
+	// It rests on something AgentGuard does not evaluate, for example a
+	// Condition on a policy statement. The link says what.
+	Confidence_CONFIDENCE_REDUCED Confidence = 2
+)
+
+// Enum value maps for Confidence.
+var (
+	Confidence_name = map[int32]string{
+		0: "CONFIDENCE_UNSPECIFIED",
+		1: "CONFIDENCE_HIGH",
+		2: "CONFIDENCE_REDUCED",
+	}
+	Confidence_value = map[string]int32{
+		"CONFIDENCE_UNSPECIFIED": 0,
+		"CONFIDENCE_HIGH":        1,
+		"CONFIDENCE_REDUCED":     2,
+	}
+)
+
+func (x Confidence) Enum() *Confidence {
+	p := new(Confidence)
+	*p = x
+	return p
+}
+
+func (x Confidence) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Confidence) Descriptor() protoreflect.EnumDescriptor {
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[0].Descriptor()
+}
+
+func (Confidence) Type() protoreflect.EnumType {
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[0]
+}
+
+func (x Confidence) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Confidence.Descriptor instead.
+func (Confidence) EnumDescriptor() ([]byte, []int) {
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{0}
+}
+
 // The kind of a link in a Reach Path.
 type LinkKind int32
 
@@ -69,11 +122,11 @@ func (x LinkKind) String() string {
 }
 
 func (LinkKind) Descriptor() protoreflect.EnumDescriptor {
-	return file_agentguard_analysis_v1_analysis_proto_enumTypes[0].Descriptor()
+	return file_agentguard_analysis_v1_analysis_proto_enumTypes[1].Descriptor()
 }
 
 func (LinkKind) Type() protoreflect.EnumType {
-	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[0]
+	return &file_agentguard_analysis_v1_analysis_proto_enumTypes[1]
 }
 
 func (x LinkKind) Number() protoreflect.EnumNumber {
@@ -82,7 +135,7 @@ func (x LinkKind) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use LinkKind.Descriptor instead.
 func (LinkKind) EnumDescriptor() ([]byte, []int) {
-	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{0}
+	return file_agentguard_analysis_v1_analysis_proto_rawDescGZIP(), []int{1}
 }
 
 // The result of one analysis of an Agent Deployment.
@@ -138,7 +191,9 @@ type ReachPath struct {
 	// Name of the Agent Deployment the path starts from.
 	AgentDeployment string `protobuf:"bytes,1,opt,name=agent_deployment,json=agentDeployment,proto3" json:"agent_deployment,omitempty"`
 	// The path's links, in order from the Tool to the Impact.
-	Links         []*Link `protobuf:"bytes,2,rep,name=links,proto3" json:"links,omitempty"`
+	Links []*Link `protobuf:"bytes,2,rep,name=links,proto3" json:"links,omitempty"`
+	// How far to trust the path: the weakest confidence of its links.
+	Confidence    Confidence `protobuf:"varint,3,opt,name=confidence,proto3,enum=agentguard.analysis.v1.Confidence" json:"confidence,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -187,6 +242,13 @@ func (x *ReachPath) GetLinks() []*Link {
 	return nil
 }
 
+func (x *ReachPath) GetConfidence() Confidence {
+	if x != nil {
+		return x.Confidence
+	}
+	return Confidence_CONFIDENCE_UNSPECIFIED
+}
+
 // One link in a Reach Path.
 type Link struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -194,9 +256,13 @@ type Link struct {
 	// Human-readable description of the link, for example "Linux user deploy".
 	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
 	// Where the link comes from.
-	Evidence      *Evidence `protobuf:"bytes,3,opt,name=evidence,proto3" json:"evidence,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Evidence *Evidence `protobuf:"bytes,3,opt,name=evidence,proto3" json:"evidence,omitempty"`
+	// How far to trust this link.
+	Confidence Confidence `protobuf:"varint,4,opt,name=confidence,proto3,enum=agentguard.analysis.v1.Confidence" json:"confidence,omitempty"`
+	// Why the confidence is reduced. Empty when it is high.
+	ConfidenceReason string `protobuf:"bytes,5,opt,name=confidence_reason,json=confidenceReason,proto3" json:"confidence_reason,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Link) Reset() {
@@ -248,6 +314,20 @@ func (x *Link) GetEvidence() *Evidence {
 		return x.Evidence
 	}
 	return nil
+}
+
+func (x *Link) GetConfidence() Confidence {
+	if x != nil {
+		return x.Confidence
+	}
+	return Confidence_CONFIDENCE_UNSPECIFIED
+}
+
+func (x *Link) GetConfidenceReason() string {
+	if x != nil {
+		return x.ConfidenceReason
+	}
+	return ""
 }
 
 // The evidence behind a link.
@@ -312,17 +392,29 @@ const file_agentguard_analysis_v1_analysis_proto_rawDesc = "" +
 	"%agentguard/analysis/v1/analysis.proto\x12\x16agentguard.analysis.v1\"T\n" +
 	"\x0eAnalysisResult\x12B\n" +
 	"\vreach_paths\x18\x01 \x03(\v2!.agentguard.analysis.v1.ReachPathR\n" +
-	"reachPaths\"j\n" +
+	"reachPaths\"\xae\x01\n" +
 	"\tReachPath\x12)\n" +
 	"\x10agent_deployment\x18\x01 \x01(\tR\x0fagentDeployment\x122\n" +
-	"\x05links\x18\x02 \x03(\v2\x1c.agentguard.analysis.v1.LinkR\x05links\"\x90\x01\n" +
+	"\x05links\x18\x02 \x03(\v2\x1c.agentguard.analysis.v1.LinkR\x05links\x12B\n" +
+	"\n" +
+	"confidence\x18\x03 \x01(\x0e2\".agentguard.analysis.v1.ConfidenceR\n" +
+	"confidence\"\x81\x02\n" +
 	"\x04Link\x124\n" +
 	"\x04kind\x18\x01 \x01(\x0e2 .agentguard.analysis.v1.LinkKindR\x04kind\x12\x14\n" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12<\n" +
-	"\bevidence\x18\x03 \x01(\v2 .agentguard.analysis.v1.EvidenceR\bevidence\">\n" +
+	"\bevidence\x18\x03 \x01(\v2 .agentguard.analysis.v1.EvidenceR\bevidence\x12B\n" +
+	"\n" +
+	"confidence\x18\x04 \x01(\x0e2\".agentguard.analysis.v1.ConfidenceR\n" +
+	"confidence\x12+\n" +
+	"\x11confidence_reason\x18\x05 \x01(\tR\x10confidenceReason\">\n" +
 	"\bEvidence\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12\x1a\n" +
-	"\blocation\x18\x02 \x01(\tR\blocation*\xa4\x01\n" +
+	"\blocation\x18\x02 \x01(\tR\blocation*U\n" +
+	"\n" +
+	"Confidence\x12\x1a\n" +
+	"\x16CONFIDENCE_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fCONFIDENCE_HIGH\x10\x01\x12\x16\n" +
+	"\x12CONFIDENCE_REDUCED\x10\x02*\xa4\x01\n" +
 	"\bLinkKind\x12\x19\n" +
 	"\x15LINK_KIND_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eLINK_KIND_TOOL\x10\x01\x12\x16\n" +
@@ -344,25 +436,28 @@ func file_agentguard_analysis_v1_analysis_proto_rawDescGZIP() []byte {
 	return file_agentguard_analysis_v1_analysis_proto_rawDescData
 }
 
-var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_agentguard_analysis_v1_analysis_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
 var file_agentguard_analysis_v1_analysis_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_agentguard_analysis_v1_analysis_proto_goTypes = []any{
-	(LinkKind)(0),          // 0: agentguard.analysis.v1.LinkKind
-	(*AnalysisResult)(nil), // 1: agentguard.analysis.v1.AnalysisResult
-	(*ReachPath)(nil),      // 2: agentguard.analysis.v1.ReachPath
-	(*Link)(nil),           // 3: agentguard.analysis.v1.Link
-	(*Evidence)(nil),       // 4: agentguard.analysis.v1.Evidence
+	(Confidence)(0),        // 0: agentguard.analysis.v1.Confidence
+	(LinkKind)(0),          // 1: agentguard.analysis.v1.LinkKind
+	(*AnalysisResult)(nil), // 2: agentguard.analysis.v1.AnalysisResult
+	(*ReachPath)(nil),      // 3: agentguard.analysis.v1.ReachPath
+	(*Link)(nil),           // 4: agentguard.analysis.v1.Link
+	(*Evidence)(nil),       // 5: agentguard.analysis.v1.Evidence
 }
 var file_agentguard_analysis_v1_analysis_proto_depIdxs = []int32{
-	2, // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
-	3, // 1: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
-	0, // 2: agentguard.analysis.v1.Link.kind:type_name -> agentguard.analysis.v1.LinkKind
-	4, // 3: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
-	4, // [4:4] is the sub-list for method output_type
-	4, // [4:4] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	3, // 0: agentguard.analysis.v1.AnalysisResult.reach_paths:type_name -> agentguard.analysis.v1.ReachPath
+	4, // 1: agentguard.analysis.v1.ReachPath.links:type_name -> agentguard.analysis.v1.Link
+	0, // 2: agentguard.analysis.v1.ReachPath.confidence:type_name -> agentguard.analysis.v1.Confidence
+	1, // 3: agentguard.analysis.v1.Link.kind:type_name -> agentguard.analysis.v1.LinkKind
+	5, // 4: agentguard.analysis.v1.Link.evidence:type_name -> agentguard.analysis.v1.Evidence
+	0, // 5: agentguard.analysis.v1.Link.confidence:type_name -> agentguard.analysis.v1.Confidence
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_agentguard_analysis_v1_analysis_proto_init() }
@@ -375,7 +470,7 @@ func file_agentguard_analysis_v1_analysis_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentguard_analysis_v1_analysis_proto_rawDesc), len(file_agentguard_analysis_v1_analysis_proto_rawDesc)),
-			NumEnums:      1,
+			NumEnums:      2,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,

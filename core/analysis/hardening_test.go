@@ -106,6 +106,25 @@ func TestAnalyzeRejectsInvalidSnapshots(t *testing.T) {
 			"$.aws.identities[0].policies[0].name: required field is missing"},
 		{"policy without a document", aws, `"document": {`, `"documentX": {`,
 			"snapshots/aws.json: invalid Snapshot:"},
+		{"policy kind unspecified", aws, `"POLICY_KIND_INLINE"`, `"POLICY_KIND_UNSPECIFIED"`,
+			"$.aws.identities[0].policies[0].kind: required field is missing"},
+		{"inline policy with an ARN", aws, `"POLICY_KIND_INLINE",`, `"POLICY_KIND_INLINE", "arn": "arn:aws:iam::123456789012:policy/ops",`,
+			"$.aws.identities[0].policies[0].arn: an inline policy has no ARN"},
+		{"managed policy without an ARN", aws, `"POLICY_KIND_INLINE"`, `"POLICY_KIND_MANAGED"`,
+			"$.aws.identities[0].policies[0].arn: required field is missing"},
+		{"managed policy with a malformed ARN", aws, `"POLICY_KIND_INLINE",`, `"POLICY_KIND_MANAGED", "arn": "ops",`,
+			"$.aws.identities[0].policies[0].arn: must be an IAM policy ARN"},
+		{"managed policy ARN of another resource type", aws, `"POLICY_KIND_INLINE",`, `"POLICY_KIND_MANAGED", "arn": "arn:aws:iam::123456789012:role/ops",`,
+			"$.aws.identities[0].policies[0].arn: must be an IAM policy ARN"},
+		{"group without an ARN", aws, `"policies": [`, `"groups": [{"name": "admins"}], "policies": [`,
+			"$.aws.identities[0].groups[0].arn: required field is missing"},
+		{"group without a name", aws, `"policies": [`, `"groups": [{"arn": "arn:aws:iam::123456789012:group/admins"}], "policies": [`,
+			"$.aws.identities[0].groups[0].name: required field is missing"},
+		{"group ARN malformed", aws, `"policies": [`, `"groups": [{"arn": "admins", "name": "admins"}], "policies": [`,
+			"$.aws.identities[0].groups[0].arn: must be an ARN"},
+		{"group policy without a name", aws, `"policies": [`, `"groups": [{"arn": "arn:aws:iam::123456789012:group/admins", "name": "admins",
+        "policies": [{"kind": "POLICY_KIND_INLINE", "document": {}}]}], "policies": [`,
+			"$.aws.identities[0].groups[0].policies[0].name: required field is missing"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -319,6 +338,23 @@ func TestAnalyzeRejectsMalformedPolicyDocuments(t *testing.T) {
                   "Action": "s3:*"`, `"Effect": ["Allow"],
                   "Action": "s3:*"`,
 			"document: invalid policy document: Effect must not be an array"},
+		{"unknown Effect", `"Effect": "Allow",
+                  "Action": "s3:*"`, `"Effect": "Permit",
+                  "Action": "s3:*"`,
+			`$.aws.identities[0].policies[0].document: invalid policy document: Statement[0]: Effect must be "Allow" or "Deny"`},
+		{"Action and NotAction together", `"Action": "s3:*"`, `"Action": "s3:*", "NotAction": "iam:*"`,
+			"document: invalid policy document: Statement[0]: Action and NotAction cannot both be present"},
+		{"statement without a Resource", `"Resource": "*"
+                },
+                {`, `"Sid": "x"
+                },
+                {`,
+			"document: invalid policy document: Statement[0]: needs Resource or NotResource"},
+		{"Condition is not an object", `"Action": "s3:*"`, `"Action": "s3:*", "Condition": "yes"`,
+			"document: invalid policy document: Condition must be an object"},
+		{"error in a group policy", `"policies": [`, `"groups": [{"arn": "arn:aws:iam::123456789012:group/g", "name": "g", "policies": [{"name": "p", "kind": "POLICY_KIND_INLINE",
+        "document": {"Statement": [{"Effect": "Maybe", "Action": "a:b", "Resource": "*"}]}}]}], "policies": [`,
+			`$.aws.identities[0].groups[0].policies[0].document: invalid policy document: Statement[0]: Effect must be "Allow" or "Deny"`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

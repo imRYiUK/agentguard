@@ -1,6 +1,7 @@
 package awspolicy_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -13,9 +14,9 @@ import (
 	"github.com/imRYiUK/agentguard/core/internal/limits"
 )
 
-// FuzzGrants checks that reading an IAM policy document never panics and
+// FuzzParse checks that reading an IAM policy document never panics and
 // always enforces the limits, whatever the document.
-func FuzzGrants(f *testing.F) {
+func FuzzParse(f *testing.F) {
 	f.Add([]byte(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}`))
 	f.Add([]byte(`{"Statement":{"Effect":"Allow","Action":["a:b","c:d"],"Resource":["x","y"]}}`))
 	f.Add([]byte(`{"Statement":[{"Effect":"Deny","NotAction":"s3:*","NotResource":"*","Condition":{"Bool":{"k":"v"}}}]}`))
@@ -30,12 +31,36 @@ func FuzzGrants(f *testing.F) {
 		if err := protojson.Unmarshal(content, &doc); err != nil {
 			t.Skip("not a JSON object")
 		}
-		_, err := awspolicy.Grants(&doc)
+		_, err := awspolicy.Parse(&doc)
 		if proto.Size(&doc) > limits.MaxPolicyDocumentBytes && err == nil {
 			t.Fatalf("accepted a document of %d bytes; the limit is %d", proto.Size(&doc), limits.MaxPolicyDocumentBytes)
 		}
 		if depth, ok := fuzzutil.JSONDepth(content); ok && depth > limits.MaxPolicyDepth && err == nil {
 			t.Fatalf("accepted a document nested %d levels; the limit is %d", depth, limits.MaxPolicyDepth)
+		}
+	})
+}
+
+// FuzzEvaluate checks that evaluating any document that parses never panics
+// and fails only by running out of its budget.
+func FuzzEvaluate(f *testing.F) {
+	f.Add([]byte(`{"Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"},{"Effect":"Deny","Action":"s3:Delete*","Resource":"arn:aws:s3:::a*"}]}`))
+	f.Add([]byte(`{"Statement":[{"Effect":"Allow","NotAction":["iam:*"],"NotResource":"x?","Condition":{"Bool":{"k":"v"}}},{"Effect":"Deny","NotAction":"s3:Get*","NotResource":["a*b","?"]}]}`))
+	f.Add([]byte(`{"Statement":[{"Effect":"Allow","Action":"*","Resource":"**?*?"},{"Effect":"Deny","Action":"?*?","Resource":"*?*"}]}`))
+
+	f.Fuzz(func(t *testing.T, content []byte) {
+		var doc structpb.Struct
+		if err := protojson.Unmarshal(content, &doc); err != nil {
+			t.Skip("not a JSON object")
+		}
+		stmts, err := awspolicy.Parse(&doc)
+		if err != nil {
+			t.Skip("not a valid policy")
+		}
+		for _, action := range []string{"s3:*", "s3:GetObject", "*", ""} {
+			if _, err := awspolicy.Evaluate(stmts, action, awspolicy.NewBudget(100_000)); err != nil && !errors.Is(err, awspolicy.ErrBudgetExhausted) {
+				t.Fatalf("Evaluate(%q): %v", action, err)
+			}
 		}
 	})
 }

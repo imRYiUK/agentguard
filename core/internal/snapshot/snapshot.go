@@ -55,6 +55,8 @@ var (
 	awsAccount  = regexp.MustCompile(`^[0-9]{12}$`)
 	fingerprint = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 	arn         = regexp.MustCompile(`^arn:aws[a-z-]*:[a-z0-9-]+:[a-z0-9-]*:[0-9]*:.+$`)
+	// An AWS managed policy has "aws" where an account ID would be.
+	policyARN = regexp.MustCompile(`^arn:aws[a-z-]*:iam::([0-9]{12}|aws):policy/.+$`)
 )
 
 const fingerprintWant = `must be a fingerprint: "sha256:" and 64 hex characters`
@@ -207,14 +209,53 @@ func validateAWS(a *snapshotv1.AwsPayload) error {
 				return invalid(fmt.Sprintf("%s.accessKeyIdFingerprints[%d]", path, j), fingerprintWant)
 			}
 		}
-		for j, p := range id.GetPolicies() {
-			ppath := fmt.Sprintf("%s.policies[%d]", path, j)
-			if p.GetName() == "" {
-				return missing(ppath + ".name")
+		if err := validatePolicies(path+".policies", id.GetPolicies()); err != nil {
+			return err
+		}
+		for j, g := range id.GetGroups() {
+			gpath := fmt.Sprintf("%s.groups[%d]", path, j)
+			if g.GetArn() == "" {
+				return missing(gpath + ".arn")
 			}
-			if p.GetDocument() == nil {
-				return missing(ppath + ".document")
+			if !arn.MatchString(g.GetArn()) {
+				return invalid(gpath+".arn", "must be an ARN")
 			}
+			if g.GetName() == "" {
+				return missing(gpath + ".name")
+			}
+			if err := validatePolicies(gpath+".policies", g.GetPolicies()); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// validatePolicies checks the identity-based policies attached to an Identity
+// or a group. path is the JSONPath of the list.
+func validatePolicies(path string, policies []*snapshotv1.AwsPolicy) error {
+	for i, p := range policies {
+		ppath := fmt.Sprintf("%s[%d]", path, i)
+		if p.GetName() == "" {
+			return missing(ppath + ".name")
+		}
+		if p.GetDocument() == nil {
+			return missing(ppath + ".document")
+		}
+		switch p.GetKind() {
+		case snapshotv1.PolicyKind_POLICY_KIND_MANAGED:
+			if p.GetArn() == "" {
+				return missing(ppath + ".arn")
+			}
+			if !policyARN.MatchString(p.GetArn()) {
+				return invalid(ppath+".arn", "must be an IAM policy ARN")
+			}
+		case snapshotv1.PolicyKind_POLICY_KIND_INLINE:
+			if p.GetArn() != "" {
+				return invalid(ppath+".arn", "an inline policy has no ARN")
+			}
+		default:
+			return missing(ppath + ".kind")
 		}
 	}
 	return nil

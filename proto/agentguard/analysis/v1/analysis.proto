@@ -15,6 +15,18 @@ message ReachPath {
   string agent_deployment = 1;
   // The path's links, in order from the Tool to the Impact.
   repeated Link links = 2;
+  // How far to trust the path: the weakest confidence of its links.
+  Confidence confidence = 3;
+}
+
+// How far to trust a link or a path.
+enum Confidence {
+  CONFIDENCE_UNSPECIFIED = 0;
+  // Every fact behind it was evaluated.
+  CONFIDENCE_HIGH = 1;
+  // It rests on something AgentGuard does not evaluate, for example a
+  // Condition on a policy statement. The link says what.
+  CONFIDENCE_REDUCED = 2;
 }
 
 // The kind of a link in a Reach Path.
@@ -39,6 +51,10 @@ message Link {
   string label = 2;
   // Where the link comes from.
   Evidence evidence = 3;
+  // How far to trust this link.
+  Confidence confidence = 4;
+  // Why the confidence is reduced. Empty when it is high.
+  string confidence_reason = 5;
 }
 
 // The evidence behind a link.

@@ -26,6 +26,19 @@ const (
 	// MaxPolicyDepth is the nesting limit of an IAM policy document, counted
 	// from the document itself. Real policies nest about six levels.
 	MaxPolicyDepth = 16
+	// MaxPolicyEntryLength is the length limit of one Action, NotAction,
+	// Resource, or NotResource entry of an IAM policy statement. An ARN is at
+	// most 2,048 characters.
+	MaxPolicyEntryLength = 2048
+	// MaxPolicyEntries is the limit on the Action, NotAction, Resource, and
+	// NotResource entries of one IAM policy document. AWS caps a policy at
+	// 6,144 characters, so a real one has far fewer.
+	MaxPolicyEntries = 2048
+	// MaxPolicyEvalSteps is the work budget for evaluating the policies of
+	// every Identity in one analysis, in matching steps. A real policy needs
+	// a few thousand. The budget stops a hostile policy from making the
+	// evaluation run for minutes.
+	MaxPolicyEvalSteps = 200_000_000
 	// MaxListLength is the limit on the entries of one list in an Agent
 	// Manifest.
 	MaxListLength = 64

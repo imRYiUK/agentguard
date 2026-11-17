@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
-	"strings"
 )
 
 // The fixed set of Impacts a mapping may name.
@@ -60,21 +59,15 @@ func Default() (*Table, error) {
 	return &t, nil
 }
 
-// Lookup returns the Impacts mapped to an IAM action. IAM action names are
-// case-insensitive.
-func (t *Table) Lookup(action string) []Match {
+// Matches returns the Impacts of the mapping at index i of the table.
+func (t *Table) Matches(i int) []Match {
 	var matches []Match
-	for i, m := range t.Mappings {
-		if !strings.EqualFold(m.Action, action) {
-			continue
-		}
-		for _, imp := range m.Impacts {
-			matches = append(matches, Match{
-				Impact:   imp,
-				Source:   "agentguard:impact-mappings/v" + t.Version,
-				Location: fmt.Sprintf("$.mappings[%d]", i),
-			})
-		}
+	for _, imp := range t.Mappings[i].Impacts {
+		matches = append(matches, Match{
+			Impact:   imp,
+			Source:   "agentguard:impact-mappings/v" + t.Version,
+			Location: fmt.Sprintf("$.mappings[%d]", i),
+		})
 	}
 	return matches
 }

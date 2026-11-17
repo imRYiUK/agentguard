@@ -71,6 +71,58 @@ func (CredentialKind) EnumDescriptor() ([]byte, []int) {
 	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{0}
 }
 
+// How an identity-based policy is attached.
+type PolicyKind int32
+
+const (
+	PolicyKind_POLICY_KIND_UNSPECIFIED PolicyKind = 0
+	// A managed policy, AWS managed or customer managed, attached by ARN.
+	PolicyKind_POLICY_KIND_MANAGED PolicyKind = 1
+	// An inline policy, embedded in one Identity or group.
+	PolicyKind_POLICY_KIND_INLINE PolicyKind = 2
+)
+
+// Enum value maps for PolicyKind.
+var (
+	PolicyKind_name = map[int32]string{
+		0: "POLICY_KIND_UNSPECIFIED",
+		1: "POLICY_KIND_MANAGED",
+		2: "POLICY_KIND_INLINE",
+	}
+	PolicyKind_value = map[string]int32{
+		"POLICY_KIND_UNSPECIFIED": 0,
+		"POLICY_KIND_MANAGED":     1,
+		"POLICY_KIND_INLINE":      2,
+	}
+)
+
+func (x PolicyKind) Enum() *PolicyKind {
+	p := new(PolicyKind)
+	*p = x
+	return p
+}
+
+func (x PolicyKind) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PolicyKind) Descriptor() protoreflect.EnumDescriptor {
+	return file_agentguard_snapshot_v1_snapshot_proto_enumTypes[1].Descriptor()
+}
+
+func (PolicyKind) Type() protoreflect.EnumType {
+	return &file_agentguard_snapshot_v1_snapshot_proto_enumTypes[1]
+}
+
+func (x PolicyKind) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PolicyKind.Descriptor instead.
+func (PolicyKind) EnumDescriptor() ([]byte, []int) {
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{1}
+}
+
 // A read-only, point-in-time capture of facts collected from a live
 // Environment. Snapshot files are written in Protobuf canonical JSON.
 //
@@ -841,8 +893,12 @@ type AwsIdentity struct {
 	// Fingerprints of access key IDs that resolve to this Identity. They match
 	// AwsCredentialProfile.access_key_id_fingerprint in a Linux Snapshot.
 	AccessKeyIdFingerprints []string `protobuf:"bytes,2,rep,name=access_key_id_fingerprints,json=accessKeyIdFingerprints,proto3" json:"access_key_id_fingerprints,omitempty"`
-	// Identity-based policies that apply to this Identity.
-	Policies      []*AwsPolicy `protobuf:"bytes,3,rep,name=policies,proto3" json:"policies,omitempty"`
+	// Identity-based policies attached to this Identity directly, managed or
+	// inline.
+	Policies []*AwsPolicy `protobuf:"bytes,3,rep,name=policies,proto3" json:"policies,omitempty"`
+	// IAM groups the Identity is a member of. Their policies apply to the
+	// Identity too. Only an IAM user can be in a group.
+	Groups        []*AwsGroup `protobuf:"bytes,4,rep,name=groups,proto3" json:"groups,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -898,20 +954,95 @@ func (x *AwsIdentity) GetPolicies() []*AwsPolicy {
 	return nil
 }
 
+func (x *AwsIdentity) GetGroups() []*AwsGroup {
+	if x != nil {
+		return x.Groups
+	}
+	return nil
+}
+
+// An IAM group, with the identity-based policies attached to it.
+type AwsGroup struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The group's ARN.
+	Arn string `protobuf:"bytes,1,opt,name=arn,proto3" json:"arn,omitempty"`
+	// Group name.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Identity-based policies attached to the group, managed or inline.
+	Policies      []*AwsPolicy `protobuf:"bytes,3,rep,name=policies,proto3" json:"policies,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AwsGroup) Reset() {
+	*x = AwsGroup{}
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AwsGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AwsGroup) ProtoMessage() {}
+
+func (x *AwsGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AwsGroup.ProtoReflect.Descriptor instead.
+func (*AwsGroup) Descriptor() ([]byte, []int) {
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *AwsGroup) GetArn() string {
+	if x != nil {
+		return x.Arn
+	}
+	return ""
+}
+
+func (x *AwsGroup) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *AwsGroup) GetPolicies() []*AwsPolicy {
+	if x != nil {
+		return x.Policies
+	}
+	return nil
+}
+
 // An identity-based IAM policy.
 type AwsPolicy struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Policy name.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// The policy document, exactly as AWS returns it.
-	Document      *structpb.Struct `protobuf:"bytes,2,opt,name=document,proto3" json:"document,omitempty"`
+	Document *structpb.Struct `protobuf:"bytes,2,opt,name=document,proto3" json:"document,omitempty"`
+	// Whether the policy is managed or inline.
+	Kind PolicyKind `protobuf:"varint,3,opt,name=kind,proto3,enum=agentguard.snapshot.v1.PolicyKind" json:"kind,omitempty"`
+	// ARN of a managed policy. Empty for an inline policy.
+	Arn           string `protobuf:"bytes,4,opt,name=arn,proto3" json:"arn,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AwsPolicy) Reset() {
 	*x = AwsPolicy{}
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -923,7 +1054,7 @@ func (x *AwsPolicy) String() string {
 func (*AwsPolicy) ProtoMessage() {}
 
 func (x *AwsPolicy) ProtoReflect() protoreflect.Message {
-	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[12]
+	mi := &file_agentguard_snapshot_v1_snapshot_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -936,7 +1067,7 @@ func (x *AwsPolicy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AwsPolicy.ProtoReflect.Descriptor instead.
 func (*AwsPolicy) Descriptor() ([]byte, []int) {
-	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{12}
+	return file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AwsPolicy) GetName() string {
@@ -951,6 +1082,20 @@ func (x *AwsPolicy) GetDocument() *structpb.Struct {
 		return x.Document
 	}
 	return nil
+}
+
+func (x *AwsPolicy) GetKind() PolicyKind {
+	if x != nil {
+		return x.Kind
+	}
+	return PolicyKind_POLICY_KIND_UNSPECIFIED
+}
+
+func (x *AwsPolicy) GetArn() string {
+	if x != nil {
+		return x.Arn
+	}
+	return ""
 }
 
 var File_agentguard_snapshot_v1_snapshot_proto protoreflect.FileDescriptor
@@ -1014,17 +1159,29 @@ const file_agentguard_snapshot_v1_snapshot_proto_rawDesc = "" +
 	"AwsPayload\x12C\n" +
 	"\n" +
 	"identities\x18\x01 \x03(\v2#.agentguard.snapshot.v1.AwsIdentityR\n" +
-	"identities\"\x9b\x01\n" +
+	"identities\"\xd5\x01\n" +
 	"\vAwsIdentity\x12\x10\n" +
 	"\x03arn\x18\x01 \x01(\tR\x03arn\x12;\n" +
 	"\x1aaccess_key_id_fingerprints\x18\x02 \x03(\tR\x17accessKeyIdFingerprints\x12=\n" +
-	"\bpolicies\x18\x03 \x03(\v2!.agentguard.snapshot.v1.AwsPolicyR\bpolicies\"T\n" +
+	"\bpolicies\x18\x03 \x03(\v2!.agentguard.snapshot.v1.AwsPolicyR\bpolicies\x128\n" +
+	"\x06groups\x18\x04 \x03(\v2 .agentguard.snapshot.v1.AwsGroupR\x06groups\"o\n" +
+	"\bAwsGroup\x12\x10\n" +
+	"\x03arn\x18\x01 \x01(\tR\x03arn\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12=\n" +
+	"\bpolicies\x18\x03 \x03(\v2!.agentguard.snapshot.v1.AwsPolicyR\bpolicies\"\x9e\x01\n" +
 	"\tAwsPolicy\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x123\n" +
-	"\bdocument\x18\x02 \x01(\v2\x17.google.protobuf.StructR\bdocument*]\n" +
+	"\bdocument\x18\x02 \x01(\v2\x17.google.protobuf.StructR\bdocument\x126\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\".agentguard.snapshot.v1.PolicyKindR\x04kind\x12\x10\n" +
+	"\x03arn\x18\x04 \x01(\tR\x03arn*]\n" +
 	"\x0eCredentialKind\x12\x1f\n" +
 	"\x1bCREDENTIAL_KIND_UNSPECIFIED\x10\x00\x12*\n" +
-	"&CREDENTIAL_KIND_AWS_SHARED_CREDENTIALS\x10\x01B\xf3\x01\n" +
+	"&CREDENTIAL_KIND_AWS_SHARED_CREDENTIALS\x10\x01*Z\n" +
+	"\n" +
+	"PolicyKind\x12\x1b\n" +
+	"\x17POLICY_KIND_UNSPECIFIED\x10\x00\x12\x17\n" +
+	"\x13POLICY_KIND_MANAGED\x10\x01\x12\x16\n" +
+	"\x12POLICY_KIND_INLINE\x10\x02B\xf3\x01\n" +
 	"\x1acom.agentguard.snapshot.v1B\rSnapshotProtoP\x01ZLgithub.com/imRYiUK/agentguard/proto/gen/go/agentguard/snapshot/v1;snapshotv1\xa2\x02\x03ASX\xaa\x02\x16Agentguard.Snapshot.V1\xca\x02\x16Agentguard\\Snapshot\\V1\xe2\x02\"Agentguard\\Snapshot\\V1\\GPBMetadata\xea\x02\x18Agentguard::Snapshot::V1b\x06proto3"
 
 var (
@@ -1039,47 +1196,52 @@ func file_agentguard_snapshot_v1_snapshot_proto_rawDescGZIP() []byte {
 	return file_agentguard_snapshot_v1_snapshot_proto_rawDescData
 }
 
-var file_agentguard_snapshot_v1_snapshot_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agentguard_snapshot_v1_snapshot_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_agentguard_snapshot_v1_snapshot_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agentguard_snapshot_v1_snapshot_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_agentguard_snapshot_v1_snapshot_proto_goTypes = []any{
 	(CredentialKind)(0),              // 0: agentguard.snapshot.v1.CredentialKind
-	(*Snapshot)(nil),                 // 1: agentguard.snapshot.v1.Snapshot
-	(*EnvironmentIdentity)(nil),      // 2: agentguard.snapshot.v1.EnvironmentIdentity
-	(*LinuxEnvironmentIdentity)(nil), // 3: agentguard.snapshot.v1.LinuxEnvironmentIdentity
-	(*AwsEnvironmentIdentity)(nil),   // 4: agentguard.snapshot.v1.AwsEnvironmentIdentity
-	(*BlindSpot)(nil),                // 5: agentguard.snapshot.v1.BlindSpot
-	(*LinuxPayload)(nil),             // 6: agentguard.snapshot.v1.LinuxPayload
-	(*LinuxUser)(nil),                // 7: agentguard.snapshot.v1.LinuxUser
-	(*LinuxGroup)(nil),               // 8: agentguard.snapshot.v1.LinuxGroup
-	(*CredentialFile)(nil),           // 9: agentguard.snapshot.v1.CredentialFile
-	(*AwsCredentialProfile)(nil),     // 10: agentguard.snapshot.v1.AwsCredentialProfile
-	(*AwsPayload)(nil),               // 11: agentguard.snapshot.v1.AwsPayload
-	(*AwsIdentity)(nil),              // 12: agentguard.snapshot.v1.AwsIdentity
-	(*AwsPolicy)(nil),                // 13: agentguard.snapshot.v1.AwsPolicy
-	(*timestamppb.Timestamp)(nil),    // 14: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),          // 15: google.protobuf.Struct
+	(PolicyKind)(0),                  // 1: agentguard.snapshot.v1.PolicyKind
+	(*Snapshot)(nil),                 // 2: agentguard.snapshot.v1.Snapshot
+	(*EnvironmentIdentity)(nil),      // 3: agentguard.snapshot.v1.EnvironmentIdentity
+	(*LinuxEnvironmentIdentity)(nil), // 4: agentguard.snapshot.v1.LinuxEnvironmentIdentity
+	(*AwsEnvironmentIdentity)(nil),   // 5: agentguard.snapshot.v1.AwsEnvironmentIdentity
+	(*BlindSpot)(nil),                // 6: agentguard.snapshot.v1.BlindSpot
+	(*LinuxPayload)(nil),             // 7: agentguard.snapshot.v1.LinuxPayload
+	(*LinuxUser)(nil),                // 8: agentguard.snapshot.v1.LinuxUser
+	(*LinuxGroup)(nil),               // 9: agentguard.snapshot.v1.LinuxGroup
+	(*CredentialFile)(nil),           // 10: agentguard.snapshot.v1.CredentialFile
+	(*AwsCredentialProfile)(nil),     // 11: agentguard.snapshot.v1.AwsCredentialProfile
+	(*AwsPayload)(nil),               // 12: agentguard.snapshot.v1.AwsPayload
+	(*AwsIdentity)(nil),              // 13: agentguard.snapshot.v1.AwsIdentity
+	(*AwsGroup)(nil),                 // 14: agentguard.snapshot.v1.AwsGroup
+	(*AwsPolicy)(nil),                // 15: agentguard.snapshot.v1.AwsPolicy
+	(*timestamppb.Timestamp)(nil),    // 16: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),          // 17: google.protobuf.Struct
 }
 var file_agentguard_snapshot_v1_snapshot_proto_depIdxs = []int32{
-	14, // 0: agentguard.snapshot.v1.Snapshot.collected_at:type_name -> google.protobuf.Timestamp
-	2,  // 1: agentguard.snapshot.v1.Snapshot.environment:type_name -> agentguard.snapshot.v1.EnvironmentIdentity
-	5,  // 2: agentguard.snapshot.v1.Snapshot.blind_spots:type_name -> agentguard.snapshot.v1.BlindSpot
-	6,  // 3: agentguard.snapshot.v1.Snapshot.linux:type_name -> agentguard.snapshot.v1.LinuxPayload
-	11, // 4: agentguard.snapshot.v1.Snapshot.aws:type_name -> agentguard.snapshot.v1.AwsPayload
-	3,  // 5: agentguard.snapshot.v1.EnvironmentIdentity.linux:type_name -> agentguard.snapshot.v1.LinuxEnvironmentIdentity
-	4,  // 6: agentguard.snapshot.v1.EnvironmentIdentity.aws:type_name -> agentguard.snapshot.v1.AwsEnvironmentIdentity
-	7,  // 7: agentguard.snapshot.v1.LinuxPayload.agent_user:type_name -> agentguard.snapshot.v1.LinuxUser
-	9,  // 8: agentguard.snapshot.v1.LinuxPayload.credential_files:type_name -> agentguard.snapshot.v1.CredentialFile
-	8,  // 9: agentguard.snapshot.v1.LinuxUser.groups:type_name -> agentguard.snapshot.v1.LinuxGroup
+	16, // 0: agentguard.snapshot.v1.Snapshot.collected_at:type_name -> google.protobuf.Timestamp
+	3,  // 1: agentguard.snapshot.v1.Snapshot.environment:type_name -> agentguard.snapshot.v1.EnvironmentIdentity
+	6,  // 2: agentguard.snapshot.v1.Snapshot.blind_spots:type_name -> agentguard.snapshot.v1.BlindSpot
+	7,  // 3: agentguard.snapshot.v1.Snapshot.linux:type_name -> agentguard.snapshot.v1.LinuxPayload
+	12, // 4: agentguard.snapshot.v1.Snapshot.aws:type_name -> agentguard.snapshot.v1.AwsPayload
+	4,  // 5: agentguard.snapshot.v1.EnvironmentIdentity.linux:type_name -> agentguard.snapshot.v1.LinuxEnvironmentIdentity
+	5,  // 6: agentguard.snapshot.v1.EnvironmentIdentity.aws:type_name -> agentguard.snapshot.v1.AwsEnvironmentIdentity
+	8,  // 7: agentguard.snapshot.v1.LinuxPayload.agent_user:type_name -> agentguard.snapshot.v1.LinuxUser
+	10, // 8: agentguard.snapshot.v1.LinuxPayload.credential_files:type_name -> agentguard.snapshot.v1.CredentialFile
+	9,  // 9: agentguard.snapshot.v1.LinuxUser.groups:type_name -> agentguard.snapshot.v1.LinuxGroup
 	0,  // 10: agentguard.snapshot.v1.CredentialFile.kind:type_name -> agentguard.snapshot.v1.CredentialKind
-	10, // 11: agentguard.snapshot.v1.CredentialFile.aws_profiles:type_name -> agentguard.snapshot.v1.AwsCredentialProfile
-	12, // 12: agentguard.snapshot.v1.AwsPayload.identities:type_name -> agentguard.snapshot.v1.AwsIdentity
-	13, // 13: agentguard.snapshot.v1.AwsIdentity.policies:type_name -> agentguard.snapshot.v1.AwsPolicy
-	15, // 14: agentguard.snapshot.v1.AwsPolicy.document:type_name -> google.protobuf.Struct
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	11, // 11: agentguard.snapshot.v1.CredentialFile.aws_profiles:type_name -> agentguard.snapshot.v1.AwsCredentialProfile
+	13, // 12: agentguard.snapshot.v1.AwsPayload.identities:type_name -> agentguard.snapshot.v1.AwsIdentity
+	15, // 13: agentguard.snapshot.v1.AwsIdentity.policies:type_name -> agentguard.snapshot.v1.AwsPolicy
+	14, // 14: agentguard.snapshot.v1.AwsIdentity.groups:type_name -> agentguard.snapshot.v1.AwsGroup
+	15, // 15: agentguard.snapshot.v1.AwsGroup.policies:type_name -> agentguard.snapshot.v1.AwsPolicy
+	17, // 16: agentguard.snapshot.v1.AwsPolicy.document:type_name -> google.protobuf.Struct
+	1,  // 17: agentguard.snapshot.v1.AwsPolicy.kind:type_name -> agentguard.snapshot.v1.PolicyKind
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_agentguard_snapshot_v1_snapshot_proto_init() }
@@ -1100,8 +1262,8 @@ func file_agentguard_snapshot_v1_snapshot_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agentguard_snapshot_v1_snapshot_proto_rawDesc), len(file_agentguard_snapshot_v1_snapshot_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   13,
+			NumEnums:      2,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

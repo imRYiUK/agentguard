@@ -25,6 +25,7 @@
         "policies": [
           {
             "name": "ops-access",
+            "kind": "POLICY_KIND_INLINE",
             "document": {
               "Version": "2012-10-17",
               "Statement": "Allow everything", "Ignored": [

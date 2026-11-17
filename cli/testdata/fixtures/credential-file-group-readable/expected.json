@@ -9,7 +9,8 @@
           "evidence": {
             "source": ".mcp.json",
             "location": "$.mcpServers.shell"
-          }
+          },
+          "confidence": "CONFIDENCE_HIGH"
         },
         {
           "kind": "LINK_KIND_IDENTITY",
@@ -17,7 +18,8 @@
           "evidence": {
             "source": "snapshots/linux.json",
             "location": "$.linux.agentUser"
-          }
+          },
+          "confidence": "CONFIDENCE_HIGH"
         },
         {
           "kind": "LINK_KIND_IDENTITY_HOP",
@@ -25,7 +27,8 @@
           "evidence": {
             "source": "snapshots/linux.json",
             "location": "$.linux.credentialFiles[0].awsProfiles[0]"
-          }
+          },
+          "confidence": "CONFIDENCE_HIGH"
         },
         {
           "kind": "LINK_KIND_IDENTITY",
@@ -33,7 +36,8 @@
           "evidence": {
             "source": "snapshots/aws.json",
             "location": "$.aws.identities[0]"
-          }
+          },
+          "confidence": "CONFIDENCE_HIGH"
         },
         {
           "kind": "LINK_KIND_NATIVE_PERMISSION",
@@ -41,7 +45,8 @@
           "evidence": {
             "source": "snapshots/aws.json",
             "location": "$.aws.identities[0].policies[0].document.Statement[0]"
-          }
+          },
+          "confidence": "CONFIDENCE_HIGH"
         },
         {
           "kind": "LINK_KIND_IMPACT",
@@ -49,9 +54,11 @@
           "evidence": {
             "source": "agentguard:impact-mappings/v1",
             "location": "$.mappings[0]"
-          }
+          },
+          "confidence": "CONFIDENCE_HIGH"
         }
-      ]
+      ],
+      "confidence": "CONFIDENCE_HIGH"
     }
   ]
 }

@@ -131,8 +131,31 @@ message AwsIdentity {
   // Fingerprints of access key IDs that resolve to this Identity. They match
   // AwsCredentialProfile.access_key_id_fingerprint in a Linux Snapshot.
   repeated string access_key_id_fingerprints = 2;
-  // Identity-based policies that apply to this Identity.
+  // Identity-based policies attached to this Identity directly, managed or
+  // inline.
   repeated AwsPolicy policies = 3;
+  // IAM groups the Identity is a member of. Their policies apply to the
+  // Identity too. Only an IAM user can be in a group.
+  repeated AwsGroup groups = 4;
+}
+
+// An IAM group, with the identity-based policies attached to it.
+message AwsGroup {
+  // The group's ARN.
+  string arn = 1;
+  // Group name.
+  string name = 2;
+  // Identity-based policies attached to the group, managed or inline.
+  repeated AwsPolicy policies = 3;
+}
+
+// How an identity-based policy is attached.
+enum PolicyKind {
+  POLICY_KIND_UNSPECIFIED = 0;
+  // A managed policy, AWS managed or customer managed, attached by ARN.
+  POLICY_KIND_MANAGED = 1;
+  // An inline policy, embedded in one Identity or group.
+  POLICY_KIND_INLINE = 2;
 }
 
 // An identity-based IAM policy.
@@ -141,4 +164,8 @@ message AwsPolicy {
   string name = 1;
   // The policy document, exactly as AWS returns it.
   google.protobuf.Struct document = 2;
+  // Whether the policy is managed or inline.
+  PolicyKind kind = 3;
+  // ARN of a managed policy. Empty for an inline policy.
+  string arn = 4;
 }

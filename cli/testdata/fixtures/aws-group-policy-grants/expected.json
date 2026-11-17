@@ -1,0 +1,64 @@
+{
+  "reachPaths": [
+    {
+      "agentDeployment": "deploy-agent",
+      "links": [
+        {
+          "kind": "LINK_KIND_TOOL",
+          "label": "shell Tool (MCP server shell)",
+          "evidence": {
+            "source": ".mcp.json",
+            "location": "$.mcpServers.shell"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "Linux user deploy (uid 1001)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.agentUser"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY_HOP",
+          "label": "can read AWS credential file /home/deploy/.aws/credentials (profile ops)",
+          "evidence": {
+            "source": "snapshots/linux.json",
+            "location": "$.linux.credentialFiles[0].awsProfiles[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IDENTITY",
+          "label": "AWS role arn:aws:iam::123456789012:role/ops",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_NATIVE_PERMISSION",
+          "label": "Allow s3:* on *",
+          "evidence": {
+            "source": "snapshots/aws.json",
+            "location": "$.aws.identities[0].groups[0].policies[0].document.Statement[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        },
+        {
+          "kind": "LINK_KIND_IMPACT",
+          "label": "Destroy Data",
+          "evidence": {
+            "source": "agentguard:impact-mappings/v1",
+            "location": "$.mappings[0]"
+          },
+          "confidence": "CONFIDENCE_HIGH"
+        }
+      ],
+      "confidence": "CONFIDENCE_HIGH"
+    }
+  ]
+}

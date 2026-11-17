@@ -65,6 +65,7 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 		return nil, err
 	}
 
+	budget := awspolicy.NewBudget(limits.MaxPolicyEvalSteps)
 	result := &analysisv1.AnalysisResult{}
 	for _, tool := range tools {
 		toolLink := link(analysisv1.LinkKind_LINK_KIND_TOOL,
@@ -75,25 +76,41 @@ func Analyze(in Input) (*analysisv1.AnalysisResult, error) {
 				return nil, err
 			}
 			for _, hop := range hops {
-				for _, perm := range hop.to.grants {
-					for _, mapping := range impacts.Lookup(perm.Action) {
-						result.ReachPaths = append(result.ReachPaths, &analysisv1.ReachPath{
-							AgentDeployment: m.Agent.Name,
-							Links: []*analysisv1.Link{
-								toolLink,
-								host.userLink,
-								hop.link,
-								hop.to.link,
-								perm.link,
-								link(analysisv1.LinkKind_LINK_KIND_IMPACT, mapping.Impact, mapping.Source, mapping.Location),
-							},
-						})
+				perms, err := hop.to.permissions(impacts, budget)
+				if err != nil {
+					return nil, err
+				}
+				for _, perm := range perms {
+					links := []*analysisv1.Link{
+						toolLink,
+						host.userLink,
+						hop.link,
+						hop.to.link,
+						perm.link,
+						perm.impact,
 					}
+					result.ReachPaths = append(result.ReachPaths, &analysisv1.ReachPath{
+						AgentDeployment: m.Agent.Name,
+						Links:           links,
+						Confidence:      weakest(links),
+					})
 				}
 			}
 		}
 	}
 	return result, nil
+}
+
+// weakest returns the lowest confidence among links, which is the confidence
+// of the path they form.
+func weakest(links []*analysisv1.Link) analysisv1.Confidence {
+	out := analysisv1.Confidence_CONFIDENCE_HIGH
+	for _, l := range links {
+		if l.GetConfidence() == analysisv1.Confidence_CONFIDENCE_REDUCED {
+			out = analysisv1.Confidence_CONFIDENCE_REDUCED
+		}
+	}
+	return out
 }
 
 func readManifest(files fs.FS) (*manifest.Manifest, error) {
@@ -163,14 +180,27 @@ type linuxHost struct {
 
 // awsIdentity is the analysis view of one AWS Identity in an AWS Snapshot.
 type awsIdentity struct {
+	source   string
+	location string
 	identity *snapshotv1.AwsIdentity
 	link     *analysisv1.Link
-	grants   []permission
+	// statements are the statements of every policy that applies to the
+	// Identity: its own managed and inline policies, then those of its
+	// groups. A statement's Policy indexes policyLocations.
+	statements []awspolicy.Statement
+	// policyLocations are the JSONPaths in the Snapshot of the policy
+	// documents the statements came from.
+	policyLocations []string
+
+	evaluated bool
+	perms     []permission
 }
 
+// permission is one Native Permission of an Identity with the Impact
+// attached to it.
 type permission struct {
-	awspolicy.Grant
-	link *analysisv1.Link
+	link   *analysisv1.Link
+	impact *analysisv1.Link
 }
 
 // hop is an Identity Hop from a Linux user to an AWS Identity.
@@ -223,25 +253,84 @@ func readSnapshots(files fs.FS, envs []manifest.Environment) ([]*linuxHost, []*a
 
 func readAWSIdentity(source, location string, id *snapshotv1.AwsIdentity) (*awsIdentity, error) {
 	ident := &awsIdentity{
+		source:   source,
+		location: location,
 		identity: id,
 		link:     link(analysisv1.LinkKind_LINK_KIND_IDENTITY, awsIdentityLabel(id.GetArn()), source, location),
 	}
-	for i, policy := range id.GetPolicies() {
-		docLocation := fmt.Sprintf("%s.policies[%d].document", location, i)
-		grants, err := awspolicy.Grants(policy.GetDocument())
-		if err != nil {
-			return nil, fmt.Errorf("%s: %s: %w", source, docLocation, err)
+	add := func(policies []*snapshotv1.AwsPolicy, listLocation string) error {
+		for i, policy := range policies {
+			docLocation := fmt.Sprintf("%s[%d].document", listLocation, i)
+			stmts, err := awspolicy.Parse(policy.GetDocument())
+			if err != nil {
+				return fmt.Errorf("%s: %s: %w", source, docLocation, err)
+			}
+			for j := range stmts {
+				stmts[j].Policy = len(ident.policyLocations)
+			}
+			ident.statements = append(ident.statements, stmts...)
+			ident.policyLocations = append(ident.policyLocations, docLocation)
 		}
-		for _, g := range grants {
-			ident.grants = append(ident.grants, permission{
-				Grant: g,
-				link: link(analysisv1.LinkKind_LINK_KIND_NATIVE_PERMISSION,
-					fmt.Sprintf("Allow %s on %s", g.Action, g.Resource),
-					source, docLocation+strings.TrimPrefix(g.Location, "$")),
-			})
+		return nil
+	}
+	if err := add(id.GetPolicies(), location+".policies"); err != nil {
+		return nil, err
+	}
+	for g, group := range id.GetGroups() {
+		if err := add(group.GetPolicies(), fmt.Sprintf("%s.groups[%d].policies", location, g)); err != nil {
+			return nil, err
 		}
 	}
 	return ident, nil
+}
+
+// permissions returns the Native Permissions the Identity has that an Impact
+// mapping names, each with its Impact. It evaluates all the Identity's
+// policies together, so an explicit Deny in one removes an Allow in another.
+func (a *awsIdentity) permissions(impacts *impact.Table, budget *awspolicy.Budget) ([]permission, error) {
+	if a.evaluated {
+		return a.perms, nil
+	}
+	for i, mapping := range impacts.Mappings {
+		grants, err := awspolicy.Evaluate(a.statements, mapping.Action, budget)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %s: %w", a.source, a.location, err)
+		}
+		for _, g := range grants {
+			permLink := link(analysisv1.LinkKind_LINK_KIND_NATIVE_PERMISSION,
+				"Allow "+grantAction(g)+" on "+grantResource(g),
+				a.source, a.policyLocations[g.Statement.Policy]+strings.TrimPrefix(g.Statement.Location, "$"))
+			if g.Conditional {
+				permLink.Confidence = analysisv1.Confidence_CONFIDENCE_REDUCED
+				permLink.ConfidenceReason = g.Reason
+			}
+			for _, m := range impacts.Matches(i) {
+				a.perms = append(a.perms, permission{
+					link:   permLink,
+					impact: link(analysisv1.LinkKind_LINK_KIND_IMPACT, m.Impact, m.Source, m.Location),
+				})
+			}
+		}
+	}
+	a.evaluated = true
+	return a.perms, nil
+}
+
+// grantAction describes the actions a Grant allows, as the policy states them.
+func grantAction(g awspolicy.Grant) string {
+	if len(g.Statement.NotActions) > 0 {
+		return "all actions except " + strings.Join(g.Statement.NotActions, ", ")
+	}
+	return g.Action
+}
+
+// grantResource describes the resources a Grant allows, as the policy states
+// them.
+func grantResource(g awspolicy.Grant) string {
+	if len(g.Statement.NotResources) > 0 {
+		return "all resources except " + strings.Join(g.Statement.NotResources, ", ")
+	}
+	return g.Resource
 }
 
 func awsIdentityLabel(arn string) string {
@@ -310,8 +399,9 @@ func canRead(user *snapshotv1.LinuxUser, file *snapshotv1.CredentialFile) (bool,
 
 func link(kind analysisv1.LinkKind, label, source, location string) *analysisv1.Link {
 	return &analysisv1.Link{
-		Kind:     kind,
-		Label:    label,
-		Evidence: &analysisv1.Evidence{Source: source, Location: location},
+		Kind:       kind,
+		Label:      label,
+		Evidence:   &analysisv1.Evidence{Source: source, Location: location},
+		Confidence: analysisv1.Confidence_CONFIDENCE_HIGH,
 	}
 }
