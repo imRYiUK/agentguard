@@ -1,0 +1,35 @@
+{
+  "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+  "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  "caller": {
+    "account": "123456789012",
+    "arn": "arn:aws:iam::123456789012:user/deploy"
+  },
+  "users": {
+    "deploy": {
+      "groups": ["admins", "ops"],
+      "attached": [
+        {"name": "Hidden", "arn": "arn:aws:iam::123456789012:policy/Hidden"},
+        {"name": "Seen", "arn": "arn:aws:iam::123456789012:policy/Seen"}
+      ],
+      "inline": {
+        "private": {"Version": "2012-10-17", "Statement": []},
+        "public": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}]}
+      }
+    }
+  },
+  "groups": {
+    "admins": {"arn": "arn:aws:iam::123456789012:group/admins"},
+    "ops": {"arn": "arn:aws:iam::123456789012:group/ops", "attached": [{"name": "Seen", "arn": "arn:aws:iam::123456789012:policy/Seen"}]}
+  },
+  "managed": {
+    "arn:aws:iam::123456789012:policy/Hidden": {"defaultVersion": "v1", "versions": {"v1": {"Version": "2012-10-17", "Statement": []}}},
+    "arn:aws:iam::123456789012:policy/Seen": {"defaultVersion": "v1", "versions": {"v1": {"Version": "2012-10-17", "Statement": [{"Effect": "Deny", "Action": "s3:DeleteBucket", "Resource": "*"}]}}}
+  },
+  "failures": {
+    "iam:GetPolicy arn:aws:iam::123456789012:policy/Hidden": {"code": "AccessDenied", "message": "User arn:aws:iam::123456789012:user/deploy is not authorized to perform iam:GetPolicy; token wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"},
+    "iam:GetUserPolicy deploy/private": {"code": "AccessDenied", "message": "not authorized"},
+    "iam:ListAttachedGroupPolicies admins": {"code": "AccessDenied", "message": "not authorized"},
+    "iam:ListGroupPolicies ops": {"code": "ThrottlingException", "message": "Rate exceeded"}
+  }
+}

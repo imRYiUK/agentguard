@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-test-0001",
+  "collectorVersion": "0.0.0-test",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "collectedBy": "arn:aws:sts::123456789012:assumed-role/ops/dev-session",
+  "environment": {
+    "aws": {
+      "accountId": "123456789012"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "collect service control policies (SCPs)",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect resource control policies (RCPs)",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect permission boundaries",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect session policies",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect resource-based policies",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    }
+  ],
+  "aws": {
+    "identities": [
+      {
+        "arn": "arn:aws:iam::123456789012:role/platform/ops",
+        "accessKeyIdFingerprints": [
+          "sha256:cb20d34a7adda2f5d2043836051e242fd4c2b233e02c80c91fe9d5af9b100574"
+        ],
+        "policies": [
+          {
+            "name": "S3Destroy",
+            "document": {
+              "Statement": [
+                {
+                  "Action": "s3:DeleteObject",
+                  "Condition": {
+                    "IpAddress": {
+                      "aws:SourceIp": "203.0.113.0/24"
+                    }
+                  },
+                  "Effect": "Allow",
+                  "Resource": "*"
+                }
+              ],
+              "Version": "2012-10-17"
+            },
+            "kind": "POLICY_KIND_MANAGED",
+            "arn": "arn:aws:iam::123456789012:policy/S3Destroy"
+          },
+          {
+            "name": "iam-pass",
+            "document": {
+              "Statement": [
+                {
+                  "Action": "iam:PassRole",
+                  "Effect": "Allow",
+                  "Resource": "arn:aws:iam::123456789012:role/app"
+                }
+              ],
+              "Version": "2012-10-17"
+            },
+            "kind": "POLICY_KIND_INLINE"
+          }
+        ]
+      }
+    ]
+  }
+}

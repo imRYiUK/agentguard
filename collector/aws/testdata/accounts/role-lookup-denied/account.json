@@ -1,0 +1,16 @@
+{
+  "accessKeyId": "ASIAIOSFODNN7EXAMPLE",
+  "caller": {
+    "account": "123456789012",
+    "arn": "arn:aws:sts::123456789012:assumed-role/ops/dev-session"
+  },
+  "roles": {
+    "ops": {
+      "arn": "arn:aws:iam::123456789012:role/platform/ops",
+      "inline": {"p": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:*", "Resource": "*"}]}}
+    }
+  },
+  "failures": {
+    "iam:GetRole": {"code": "AccessDenied", "message": "not authorized"}
+  }
+}

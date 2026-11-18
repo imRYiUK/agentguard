@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-test-0001",
+  "collectorVersion": "0.0.0-test",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "collectedBy": "arn:aws:iam::123456789012:user/deploy",
+  "environment": {
+    "aws": {
+      "accountId": "123456789012"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "iam:GetPolicy arn:aws:iam::123456789012:policy/Hidden",
+      "reason": "AccessDenied"
+    },
+    {
+      "attempted": "iam:GetUserPolicy user deploy, policy private",
+      "reason": "AccessDenied"
+    },
+    {
+      "attempted": "iam:ListAttachedGroupPolicies group admins",
+      "reason": "AccessDenied"
+    },
+    {
+      "attempted": "iam:ListGroupPolicies group ops",
+      "reason": "ThrottlingException"
+    },
+    {
+      "attempted": "collect service control policies (SCPs)",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect resource control policies (RCPs)",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect permission boundaries",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect session policies",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect resource-based policies",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    }
+  ],
+  "aws": {
+    "identities": [
+      {
+        "arn": "arn:aws:iam::123456789012:user/deploy",
+        "accessKeyIdFingerprints": [
+          "sha256:1a5d44a2dca19669d72edf4c4f1c27c4c1ca4b4408fbb17f6ce4ad452d78ddb3"
+        ],
+        "policies": [
+          {
+            "name": "Seen",
+            "document": {
+              "Statement": [
+                {
+                  "Action": "s3:DeleteBucket",
+                  "Effect": "Deny",
+                  "Resource": "*"
+                }
+              ],
+              "Version": "2012-10-17"
+            },
+            "kind": "POLICY_KIND_MANAGED",
+            "arn": "arn:aws:iam::123456789012:policy/Seen"
+          },
+          {
+            "name": "public",
+            "document": {
+              "Statement": [
+                {
+                  "Action": "s3:ListBucket",
+                  "Effect": "Allow",
+                  "Resource": "*"
+                }
+              ],
+              "Version": "2012-10-17"
+            },
+            "kind": "POLICY_KIND_INLINE"
+          }
+        ],
+        "groups": [
+          {
+            "arn": "arn:aws:iam::123456789012:group/admins",
+            "name": "admins"
+          },
+          {
+            "arn": "arn:aws:iam::123456789012:group/ops",
+            "name": "ops",
+            "policies": [
+              {
+                "name": "Seen",
+                "document": {
+                  "Statement": [
+                    {
+                      "Action": "s3:DeleteBucket",
+                      "Effect": "Deny",
+                      "Resource": "*"
+                    }
+                  ],
+                  "Version": "2012-10-17"
+                },
+                "kind": "POLICY_KIND_MANAGED",
+                "arn": "arn:aws:iam::123456789012:policy/Seen"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

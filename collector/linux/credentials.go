@@ -1,8 +1,6 @@
 package linux
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -11,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/imRYiUK/agentguard/collector/internal/fingerprint"
 	snapshotv1 "github.com/imRYiUK/agentguard/proto/gen/go/agentguard/snapshot/v1"
 )
 
@@ -26,11 +25,6 @@ var profileName = regexp.MustCompile(`^[A-Za-z0-9_.@+=,-]{1,32}$`)
 // accessKeyID matches an AWS access key ID, which AgentGuard never writes
 // into a Snapshot, not even as a profile name that happens to be one.
 var accessKeyID = regexp.MustCompile(`^(?:AKIA|ASIA|AIDA|AROA|AGPA|ANPA|ANVA|APKA)[A-Z2-7]{16}$`)
-
-func fingerprint(b []byte) string {
-	sum := sha256.Sum256(b)
-	return "sha256:" + hex.EncodeToString(sum[:])
-}
 
 // credentialFiles finds the AWS credential files in the home directories of
 // the user the Collector runs as, root, and every account with a login
@@ -93,7 +87,7 @@ func (c *collector) awsCredentialFile(p string) *snapshotv1.CredentialFile {
 		OwnerUid:    info.UID,
 		GroupGid:    info.GID,
 		Mode:        modeString(info.Mode),
-		Fingerprint: fingerprint(content),
+		Fingerprint: fingerprint.Of(content),
 		AwsProfiles: profiles,
 	}
 }
@@ -150,7 +144,7 @@ func parseAWSCredentials(content []byte) (profiles []*snapshotv1.AwsCredentialPr
 			if key == "aws_access_key_id" {
 				secrets = append(secrets, value)
 				if current != nil {
-					current.AccessKeyIdFingerprint = fingerprint([]byte(value))
+					current.AccessKeyIdFingerprint = fingerprint.Of([]byte(value))
 				}
 			} else if sensitiveKey(key) {
 				secrets = append(secrets, value)

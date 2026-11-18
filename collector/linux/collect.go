@@ -22,6 +22,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/imRYiUK/agentguard/collector/host"
+	"github.com/imRYiUK/agentguard/collector/internal/snapshotjson"
 	snapshotv1 "github.com/imRYiUK/agentguard/proto/gen/go/agentguard/snapshot/v1"
 )
 
@@ -108,20 +109,7 @@ func Collect(h host.Host, opts Options) (*snapshotv1.Snapshot, error) {
 
 // MarshalJSON writes a Snapshot as Protobuf canonical JSON, indented and
 // byte-stable.
-func MarshalJSON(snap *snapshotv1.Snapshot) ([]byte, error) {
-	// protojson deliberately varies its whitespace between builds, so the
-	// output is re-indented to make it byte-stable.
-	raw, err := protojson.Marshal(snap)
-	if err != nil {
-		return nil, err
-	}
-	var out bytes.Buffer
-	if err := json.Indent(&out, raw, "", "  "); err != nil {
-		return nil, err
-	}
-	out.WriteByte('\n')
-	return out.Bytes(), nil
-}
+func MarshalJSON(snap *snapshotv1.Snapshot) ([]byte, error) { return snapshotjson.Marshal(snap) }
 
 // collector holds the state of one collection.
 type collector struct {

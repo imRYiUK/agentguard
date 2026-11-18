@@ -2,27 +2,29 @@ package main_test
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/imRYiUK/agentguard/collector/aws"
+	"github.com/imRYiUK/agentguard/collector/awstest"
 	"github.com/imRYiUK/agentguard/collector/host"
 	"github.com/imRYiUK/agentguard/collector/hosttest"
 	"github.com/imRYiUK/agentguard/collector/linux"
 )
 
-// TestCollectThenAnalyze runs the whole pipeline over a fake Environment: the
-// Linux Collector reads a fake host, and the real CLI analyzes the Snapshot it
-// wrote, together with the fixture's agent configuration and AWS Snapshot.
-// It must find the Reach Path through the credential file the Collector
-// recorded, and no secret may reach the Snapshot.
+// TestCollectThenAnalyze runs the whole pipeline over fake Environments: the
+// Linux Collector reads a fake host, the AWS Collector reads a fake account,
+// and the real CLI analyzes the Snapshots they wrote, together with the
+// fixture's agent configuration. It must find the Reach Path through the
+// credential file the Linux Collector recorded to the Identity the AWS
+// Collector resolved from the same access key, and no secret may reach
+// either Snapshot.
 func TestCollectThenAnalyze(t *testing.T) {
 	const (
 		accessKeyID = "AKIAJ3EXAMPLEKEYEXAM"
@@ -67,14 +69,42 @@ func TestCollectThenAnalyze(t *testing.T) {
 		}
 	}
 
-	// The analysis input is the fixture with the Collector's Snapshot in place
-	// of the hand-written Linux one. The fixture's AWS Snapshot resolves the
-	// access key by its fingerprint, so it is pointed at this key's.
+	// The AWS Collector reads a fake account whose role the credentials
+	// resolve to, with the same access key ID as the credential file.
+	awsSnap, err := aws.Collect(context.Background(), awstest.New(awstest.Account{
+		AccessKeyID:     accessKeyID,
+		SecretAccessKey: secretKey,
+		Caller:          aws.CallerIdentity{Account: "123456789012", ARN: "arn:aws:sts::123456789012:assumed-role/ops/e2e"},
+		Roles: map[string]awstest.Principal{"ops": {
+			ARN: "arn:aws:iam::123456789012:role/ops",
+			Inline: map[string]json.RawMessage{
+				"ops-access": json.RawMessage(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}`),
+			},
+		}},
+	}), aws.Options{
+		Version:    "0.0.0-test",
+		Now:        time.Date(2026, 11, 17, 10, 5, 0, 0, time.UTC),
+		SnapshotID: "snap-aws-e2e",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	awsSnapshot, err := aws.MarshalJSON(awsSnap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, secret := range []string{secretKey, accessKeyID} {
+		if bytes.Contains(awsSnapshot, []byte(secret)) {
+			t.Fatalf("the AWS Snapshot contains a secret value:\n%s", awsSnapshot)
+		}
+	}
+
+	// The analysis input is the fixture with the Collectors' Snapshots in
+	// place of the hand-written ones.
 	dir := t.TempDir()
 	if err := os.CopyFS(dir, os.DirFS(fixture)); err != nil {
 		t.Fatal(err)
 	}
-	sum := sha256.Sum256([]byte(accessKeyID))
 	edit := func(name string, f func(string) string) {
 		t.Helper()
 		path := filepath.Join(dir, name)
@@ -86,18 +116,13 @@ func TestCollectThenAnalyze(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	oldLinux, err := os.ReadFile(filepath.Join(dir, "snapshots/linux.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	oldFingerprint := regexp.MustCompile(`"accessKeyIdFingerprint": "(sha256:[0-9a-f]{64})"`).FindSubmatch(oldLinux)[1]
-	edit("snapshots/aws.json", func(s string) string {
-		return strings.Replace(s, string(oldFingerprint), "sha256:"+hex.EncodeToString(sum[:]), 1)
-	})
 	edit("agentguard.yaml", func(s string) string {
 		return strings.Replace(s, "SHA256:nThbg6kXUpJWGl7E1IGOCspRomTxdCARLviKw6E5SY8", hostKeyFingerprint, 1)
 	})
 	if err := os.WriteFile(filepath.Join(dir, "snapshots/linux.json"), snapshot, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "snapshots/aws.json"), awsSnapshot, 0o644); err != nil {
 		t.Fatal(err)
 	}
 

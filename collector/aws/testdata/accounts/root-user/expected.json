@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-test-0001",
+  "collectorVersion": "0.0.0-test",
+  "collectedAt": "2026-11-17T10:00:00Z",
+  "collectedBy": "arn:aws:iam::123456789012:root",
+  "environment": {
+    "aws": {
+      "accountId": "123456789012"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "collect the policies of arn:aws:iam::123456789012:root",
+      "reason": "not supported: only IAM users and assumed roles are collected, and these credentials resolve to something else"
+    },
+    {
+      "attempted": "collect service control policies (SCPs)",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect resource control policies (RCPs)",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect permission boundaries",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect session policies",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    },
+    {
+      "attempted": "collect resource-based policies",
+      "reason": "not collected: the Collector does not read this policy type, so a limit it sets is not applied"
+    }
+  ],
+  "aws": {
+    "identities": [
+      {
+        "arn": "arn:aws:iam::123456789012:root",
+        "accessKeyIdFingerprints": [
+          "sha256:1a5d44a2dca19669d72edf4c4f1c27c4c1ca4b4408fbb17f6ce4ad452d78ddb3"
+        ]
+      }
+    ]
+  }
+}

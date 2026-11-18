@@ -2,8 +2,13 @@ package main_test
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"os/user"
@@ -107,7 +112,7 @@ func TestLinuxOutWritesAFileAndPrintsNothing(t *testing.T) {
 }
 
 func TestUsageErrorsExitWithStatus2(t *testing.T) {
-	for _, args := range [][]string{{}, {"windows"}, {"linux", "extra"}, {"linux", "--nope"}} {
+	for _, args := range [][]string{{}, {"windows"}, {"linux", "extra"}, {"linux", "--nope"}, {"aws", "extra"}, {"aws", "--nope"}, {"aws", "--profile"}} {
 		var stderr bytes.Buffer
 		cmd := exec.Command(binary, args...)
 		cmd.Stderr = &stderr
@@ -115,8 +120,169 @@ func TestUsageErrorsExitWithStatus2(t *testing.T) {
 		if err := cmd.Run(); !errors.As(err, &exit) || exit.ExitCode() != 2 {
 			t.Errorf("%v: want exit status 2, got %v", args, err)
 		}
-		if !strings.Contains(stderr.String(), "usage: agentguard-collector linux") {
+		if !strings.Contains(stderr.String(), "usage: agentguard-collector linux [--out FILE]") ||
+			!strings.Contains(stderr.String(), "agentguard-collector aws [--profile NAME] [--out FILE]") {
 			t.Errorf("%v: stderr = %q", args, stderr.String())
 		}
+	}
+}
+
+// fakeAWS answers the two calls the test needs, and denies every other one,
+// like an account whose credentials may only say who they are.
+func fakeAWS(t *testing.T, actions *[]string) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		action := r.PostForm.Get("Action")
+		*actions = append(*actions, action)
+		w.Header().Set("Content-Type", "text/xml")
+		if action == "GetCallerIdentity" {
+			fmt.Fprint(w, `<GetCallerIdentityResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/"><GetCallerIdentityResult>`+
+				`<Arn>arn:aws:iam::123456789012:user/deploy</Arn><UserId>AIDAEXAMPLE</UserId><Account>123456789012</Account>`+
+				`</GetCallerIdentityResult><ResponseMetadata><RequestId>r</RequestId></ResponseMetadata></GetCallerIdentityResponse>`)
+			return
+		}
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprint(w, `<ErrorResponse xmlns="https://iam.amazonaws.com/doc/2010-05-08/"><Error><Type>Sender</Type><Code>AccessDenied</Code>`+
+			`<Message>not authorized</Message></Error><RequestId>r</RequestId></ErrorResponse>`)
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// awsEnv is an environment with only the given AWS settings, so a test never
+// picks up the credentials of the machine it runs on.
+func awsEnv(t *testing.T, extra ...string) []string {
+	home := t.TempDir()
+	return append([]string{"PATH=" + os.Getenv("PATH"), "HOME=" + home, "AWS_EC2_METADATA_DISABLED=true", "AWS_REGION=us-east-1"}, extra...)
+}
+
+func TestAWSWritesASnapshotOfTheIdentityBehindTheCredentials(t *testing.T) {
+	const (
+		accessKeyID = "AKIAIOSFODNN7EXAMPLE"
+		secretKey   = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+		sessionTok  = "IQoJb3JpZ2luX2VjEXAMPLESESSIONTOKEN0123456789"
+	)
+	var actions []string
+	srv := fakeAWS(t, &actions)
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(binary, "aws")
+	cmd.Env = awsEnv(t, "AWS_ENDPOINT_URL="+srv.URL, "AWS_ACCESS_KEY_ID="+accessKeyID, "AWS_SECRET_ACCESS_KEY="+secretKey, "AWS_SESSION_TOKEN="+sessionTok)
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("agentguard-collector aws: %v\nstderr:\n%s", err, stderr.String())
+	}
+	for _, secret := range []string{accessKeyID, secretKey, sessionTok} {
+		if strings.Contains(stdout.String()+stderr.String(), secret) {
+			t.Fatalf("a secret value reached the output:\n%s", stdout.String())
+		}
+	}
+	var snap struct {
+		SnapshotID  string `json:"snapshotId"`
+		CollectedBy string `json:"collectedBy"`
+		Environment struct {
+			AWS struct {
+				AccountID string `json:"accountId"`
+			} `json:"aws"`
+		} `json:"environment"`
+		BlindSpots []struct {
+			Attempted string `json:"attempted"`
+			Reason    string `json:"reason"`
+		} `json:"blindSpots"`
+		AWS struct {
+			Identities []struct {
+				ARN          string   `json:"arn"`
+				Fingerprints []string `json:"accessKeyIdFingerprints"`
+			} `json:"identities"`
+		} `json:"aws"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &snap); err != nil {
+		t.Fatalf("stdout is not JSON: %v\n%s", err, stdout.String())
+	}
+	if !strings.HasPrefix(snap.SnapshotID, "snap-aws-") || snap.Environment.AWS.AccountID != "123456789012" ||
+		snap.CollectedBy != "arn:aws:iam::123456789012:user/deploy" {
+		t.Errorf("unexpected provenance: %+v", snap)
+	}
+	if len(snap.AWS.Identities) != 1 || snap.AWS.Identities[0].ARN != "arn:aws:iam::123456789012:user/deploy" ||
+		len(snap.AWS.Identities[0].Fingerprints) != 1 {
+		t.Errorf("unexpected Identity: %+v", snap.AWS.Identities)
+	}
+	denied := false
+	for _, b := range snap.BlindSpots {
+		denied = denied || strings.Contains(b.Attempted, "iam:ListAttachedUserPolicies") && b.Reason == "AccessDenied"
+	}
+	if !denied {
+		t.Errorf("the denied calls are not Blind Spots: %+v", snap.BlindSpots)
+	}
+	for _, a := range actions {
+		if a != "GetCallerIdentity" && !strings.HasPrefix(a, "Get") && !strings.HasPrefix(a, "List") {
+			t.Errorf("the Collector sent %s, which is not a read", a)
+		}
+	}
+}
+
+func TestAWSWithoutCredentialsFailsWithoutASnapshot(t *testing.T) {
+	var actions []string
+	srv := fakeAWS(t, &actions)
+	var stdout, stderr bytes.Buffer
+	cmd := exec.Command(binary, "aws")
+	cmd.Env = awsEnv(t, "AWS_ENDPOINT_URL="+srv.URL)
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	var exit *exec.ExitError
+	if err := cmd.Run(); !errors.As(err, &exit) || exit.ExitCode() != 1 {
+		t.Fatalf("want exit status 1, got %v", err)
+	}
+	if stdout.Len() != 0 {
+		t.Errorf("stdout must be empty, got %q", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "credentials") {
+		t.Errorf("stderr does not say the credentials are the problem: %q", stderr.String())
+	}
+}
+
+func TestAWSOutWritesAFileReadableByItsOwnerOnly(t *testing.T) {
+	var actions []string
+	srv := fakeAWS(t, &actions)
+	out := filepath.Join(t.TempDir(), "aws.json")
+	cmd := exec.Command(binary, "aws", "--out", out)
+	cmd.Env = awsEnv(t, "AWS_ENDPOINT_URL="+srv.URL, "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE", "AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(out); err != nil || info.Mode().Perm() != 0o600 || stdout.Len() != 0 {
+		t.Errorf("--out: %v %v, stdout %q", info, err, stdout.String())
+	}
+}
+
+func TestAWSProfileSelectsTheCredentialsOfThatProfile(t *testing.T) {
+	var actions []string
+	srv := fakeAWS(t, &actions)
+	env := awsEnv(t, "AWS_ENDPOINT_URL="+srv.URL)
+	home := ""
+	for _, e := range env {
+		if strings.HasPrefix(e, "HOME=") {
+			home = strings.TrimPrefix(e, "HOME=")
+		}
+	}
+	if err := os.MkdirAll(filepath.Join(home, ".aws"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	creds := "[ops]\naws_access_key_id = AKIAOPSOPSOPSOPSOPSO\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\n"
+	if err := os.WriteFile(filepath.Join(home, ".aws", "credentials"), []byte(creds), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout bytes.Buffer
+	cmd := exec.Command(binary, "aws", "--profile", "ops")
+	cmd.Env = env
+	cmd.Stdout = &stdout
+	if err := cmd.Run(); err != nil {
+		t.Fatal(err)
+	}
+	// The fingerprint of the profile's access key ID: its SHA-256 in hex.
+	sum := sha256.Sum256([]byte("AKIAOPSOPSOPSOPSOPSO"))
+	if want := "sha256:" + hex.EncodeToString(sum[:]); !strings.Contains(stdout.String(), want) {
+		t.Errorf("the Snapshot does not hold the fingerprint of the profile's key %s:\n%s", want, stdout.String())
 	}
 }

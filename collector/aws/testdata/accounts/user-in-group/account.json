@@ -1,0 +1,45 @@
+{
+  "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+  "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  "caller": {
+    "account": "123456789012",
+    "arn": "arn:aws:iam::123456789012:user/engineering/deploy"
+  },
+  "users": {
+    "deploy": {
+      "groups": ["admins"],
+      "attached": [
+        {"name": "AmazonS3ReadOnlyAccess", "arn": "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"}
+      ],
+      "inline": {
+        "scratch": {
+          "Version": "2012-10-17",
+          "Statement": [{"Effect": "Allow", "Action": "s3:PutObject", "Resource": "arn:aws:s3:::scratch/*"}]
+        }
+      }
+    }
+  },
+  "groups": {
+    "admins": {
+      "arn": "arn:aws:iam::123456789012:group/admins",
+      "attached": [
+        {"name": "S3Destroy", "arn": "arn:aws:iam::123456789012:policy/S3Destroy"}
+      ]
+    }
+  },
+  "managed": {
+    "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess": {
+      "defaultVersion": "v2",
+      "versions": {
+        "v1": {"Version": "2012-10-17", "Statement": []},
+        "v2": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": ["s3:Get*", "s3:List*"], "Resource": "*"}]}
+      }
+    },
+    "arn:aws:iam::123456789012:policy/S3Destroy": {
+      "defaultVersion": "v1",
+      "versions": {
+        "v1": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:DeleteObject", "Resource": "*"}]}
+      }
+    }
+  }
+}

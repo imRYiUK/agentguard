@@ -1,0 +1,31 @@
+{
+  "accessKeyId": "ASIAIOSFODNN7EXAMPLE",
+  "secretAccessKey": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+  "sessionToken": "IQoJb3JpZ2luX2VjEXAMPLESESSIONTOKEN0123456789",
+  "caller": {
+    "account": "123456789012",
+    "arn": "arn:aws:sts::123456789012:assumed-role/ops/dev-session"
+  },
+  "roles": {
+    "ops": {
+      "arn": "arn:aws:iam::123456789012:role/platform/ops",
+      "attached": [
+        {"name": "S3Destroy", "arn": "arn:aws:iam::123456789012:policy/S3Destroy"}
+      ],
+      "inline": {
+        "iam-pass": {
+          "Version": "2012-10-17",
+          "Statement": [{"Effect": "Allow", "Action": "iam:PassRole", "Resource": "arn:aws:iam::123456789012:role/app"}]
+        }
+      }
+    }
+  },
+  "managed": {
+    "arn:aws:iam::123456789012:policy/S3Destroy": {
+      "defaultVersion": "v1",
+      "versions": {
+        "v1": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:DeleteObject", "Resource": "*", "Condition": {"IpAddress": {"aws:SourceIp": "203.0.113.0/24"}}}]}
+      }
+    }
+  }
+}

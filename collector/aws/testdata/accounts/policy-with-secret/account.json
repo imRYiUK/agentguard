@@ -1,0 +1,13 @@
+{
+  "accessKeyId": "AKIAIOSFODNN7EXAMPLE",
+  "caller": {"account": "123456789012", "arn": "arn:aws:iam::123456789012:user/deploy"},
+  "users": {
+    "deploy": {
+      "inline": {
+        "pasted-key": {"Version": "2012-10-17", "Statement": [{"Sid": "AKIAZZZZZZZZZZZZZZZZ", "Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}]},
+        "escaped-key": {"Version": "2012-10-17", "Statement": [{"Sid": "AKIAYYYYYYYYYYYYYYYY", "Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}]},
+        "fine": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "s3:ListBucket", "Resource": "*"}]}
+      }
+    }
+  }
+}
