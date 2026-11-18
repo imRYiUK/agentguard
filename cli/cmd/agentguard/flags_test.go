@@ -30,7 +30,7 @@ func runCLI(t *testing.T, args ...string) (stdout, stderr string, code int) {
 
 func TestAnalyzeFlagsSetTheClockAndTheStalenessThreshold(t *testing.T) {
 	dir := filepath.Clean(staleFixture)
-	out, stderr, code := runCLI(t, "analyze", "--now", "2026-11-17T12:00:00Z", "--stale-after", "1h", dir)
+	out, stderr, code := runCLI(t, "analyze", "--format", "json", "--now", "2026-11-17T12:00:00Z", "--stale-after", "1h", dir)
 	if code != 0 {
 		t.Fatalf("exit %d: %s", code, stderr)
 	}
@@ -38,7 +38,7 @@ func TestAnalyzeFlagsSetTheClockAndTheStalenessThreshold(t *testing.T) {
 	if got := strings.Count(out, `"stale": true`); got != 2 {
 		t.Errorf("want 2 stale Snapshots, got %d in\n%s", got, out)
 	}
-	out, _, _ = runCLI(t, "analyze", "--now", "2026-11-17T12:00:00Z", dir)
+	out, _, _ = runCLI(t, "analyze", "--format", "json", "--now", "2026-11-17T12:00:00Z", dir)
 	if strings.Contains(out, `"stale": true`) {
 		t.Errorf("by default, a Snapshot two hours old is not stale:\n%s", out)
 	}

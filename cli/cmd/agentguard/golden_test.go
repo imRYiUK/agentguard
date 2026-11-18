@@ -16,10 +16,11 @@ import (
 // CLI binary over input/ and compares the output with the expected file byte
 // for byte.
 //
-// A fixture that expects Reach Paths has an expected.json holding the
-// stdout. A fixture whose input must be rejected has an expected-error.txt
-// holding the stderr; the CLI must then exit with status 1 and print nothing
-// to stdout.
+// A fixture that expects Reach Paths has an expected.json holding the stdout
+// of --format json and an expected.txt holding the stdout of --format text.
+// A fixture whose input must be rejected has an expected-error.txt holding
+// the stderr, the same in both formats; the CLI must then exit with status 1
+// and print nothing to stdout.
 //
 // Regenerate expected files after an intended change with:
 //
@@ -56,6 +57,13 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
+// formats are the output formats and the file of each fixture that holds the
+// expected output in it.
+var formats = []struct{ name, expectedFile string }{
+	{"json", "expected.json"},
+	{"text", "expected.txt"},
+}
+
 func TestAnalyzeFixtures(t *testing.T) {
 	entries, err := os.ReadDir(fixturesDir)
 	if err != nil {
@@ -68,54 +76,56 @@ func TestAnalyzeFixtures(t *testing.T) {
 		if !entry.IsDir() {
 			continue
 		}
-		t.Run(entry.Name(), func(t *testing.T) {
-			fixture := filepath.Join(fixturesDir, entry.Name())
-			expectedJSON := filepath.Join(fixture, "expected.json")
-			expectedError := filepath.Join(fixture, "expected-error.txt")
+		for _, format := range formats {
+			t.Run(entry.Name()+"/"+format.name, func(t *testing.T) {
+				fixture := filepath.Join(fixturesDir, entry.Name())
+				expectedOutput := filepath.Join(fixture, format.expectedFile)
+				expectedError := filepath.Join(fixture, "expected-error.txt")
 
-			var stdout, stderr bytes.Buffer
-			cmd := exec.Command(binary, "analyze", "--now", fixtureNow, filepath.Join(fixture, "input"))
-			cmd.Stdout = &stdout
-			cmd.Stderr = &stderr
-			runErr := cmd.Run()
+				var stdout, stderr bytes.Buffer
+				cmd := exec.Command(binary, "analyze", "--format", format.name, "--now", fixtureNow, filepath.Join(fixture, "input"))
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+				runErr := cmd.Run()
 
-			rejected := fileExists(expectedError)
-			if *update {
-				rejected = runErr != nil
-			}
-			var got, path string
-			if rejected {
-				var exit *exec.ExitError
-				if !errors.As(runErr, &exit) || exit.ExitCode() != 1 {
-					t.Fatalf("agentguard analyze: want exit status 1, got %v\nstderr:\n%s", runErr, stderr.String())
+				rejected := fileExists(expectedError)
+				if *update {
+					rejected = runErr != nil
 				}
-				if stdout.Len() != 0 {
-					t.Errorf("a rejected input must print nothing to stdout, got:\n%s", stdout.String())
+				var got, path string
+				if rejected {
+					var exit *exec.ExitError
+					if !errors.As(runErr, &exit) || exit.ExitCode() != 1 {
+						t.Fatalf("agentguard analyze: want exit status 1, got %v\nstderr:\n%s", runErr, stderr.String())
+					}
+					if stdout.Len() != 0 {
+						t.Errorf("a rejected input must print nothing to stdout, got:\n%s", stdout.String())
+					}
+					got, path = stderr.String(), expectedError
+				} else {
+					if runErr != nil {
+						t.Fatalf("agentguard analyze: %v\nstderr:\n%s", runErr, stderr.String())
+					}
+					got, path = stdout.String(), expectedOutput
 				}
-				got, path = stderr.String(), expectedError
-			} else {
-				if runErr != nil {
-					t.Fatalf("agentguard analyze: %v\nstderr:\n%s", runErr, stderr.String())
-				}
-				got, path = stdout.String(), expectedJSON
-			}
 
-			if *update {
-				if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
-					t.Fatal(err)
+				if *update {
+					if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+						t.Fatal(err)
+					}
+					return
 				}
-				return
-			}
 
-			expected, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatalf("reading expected output (run with -update to create it): %v", err)
-			}
-			if got != string(expected) {
-				t.Errorf("output differs from %s (run with -update to accept)\n--- got ---\n%s\n--- want ---\n%s",
-					path, got, expected)
-			}
-		})
+				expected, err := os.ReadFile(path)
+				if err != nil {
+					t.Fatalf("reading expected output (run with -update to create it): %v", err)
+				}
+				if got != string(expected) {
+					t.Errorf("output differs from %s (run with -update to accept)\n--- got ---\n%s\n--- want ---\n%s",
+						path, got, expected)
+				}
+			})
+		}
 	}
 }
 

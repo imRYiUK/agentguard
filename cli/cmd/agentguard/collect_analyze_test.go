@@ -127,7 +127,7 @@ func TestCollectThenAnalyze(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command(binary, "analyze", "--now", fixtureNow, dir)
+	cmd := exec.Command(binary, "analyze", "--format", "json", "--now", fixtureNow, dir)
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("agentguard analyze: %v\nstderr:\n%s", err, stderr.String())

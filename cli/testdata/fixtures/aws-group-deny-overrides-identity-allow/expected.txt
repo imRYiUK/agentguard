@@ -1,0 +1,20 @@
+AgentGuard analysis
+  Analyzed at 2026-11-17T12:00:00Z; a Snapshot is stale after 168h0m0s
+  Agent Manifest sha256:81e90628222172c00b1bc7f5b7e857a8323496c76a8f5e120c040563b3b90661
+  Snapshot snap-linux-0001 of build-host, collected at 2026-11-17T10:00:00Z
+  Snapshot snap-aws-0001 of prod-aws, collected at 2026-11-17T10:05:00Z
+  Impact mapping version 2, rules version 1
+
+No Reach Paths found.
+
+Secondary Findings: 2
+  - unrestricted command execution: shell Tool (MCP server shell) (deploy-agent)
+      evidence: .mcp.json $.mcpServers.shell
+  - wildcard policy: Allow s3:* on * (AWS role arn:aws:iam::123456789012:role/ops) (deploy-agent)
+      evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[0]
+
+Blind Spots: 2
+  - build-host: could not complete "read /etc/sudoers" (permission denied)
+      evidence: snapshots/linux.json $.blindSpots[0]
+  - prod-aws: could not complete "organizations:ListPolicies (SCPs)" (not collected)
+      evidence: snapshots/aws.json $.blindSpots[0]

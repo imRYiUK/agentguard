@@ -1,0 +1,128 @@
+AgentGuard analysis
+  Analyzed at 2026-11-17T12:00:00Z; a Snapshot is stale after 168h0m0s
+  Agent Manifest sha256:efa754d2784d306915c3a5a68d786db57131a169500e35ea1a2157ac4abbdb2d
+  Snapshot snap-linux-0001 of build-host, collected at 2026-11-01T10:00:00Z (stale)
+  Snapshot snap-aws-0001 of prod-aws, collected at 2026-11-17T10:05:00Z
+  Impact mapping version 2, rules version 1
+
+6 Reach Paths: 0 critical, 0 high, 0 medium, 0 low, 6 unknown
+
+1. unknown  deploy-agent (confidence: reduced)
+   fingerprint rpf1:007e334db8da1f060b6efa7a7ee7b672a964cd231df26df6ec5feaa08649bf2f, resource sensitivity unknown
+      Tool: shell Tool (MCP server shell)
+        evidence: .mcp.json $.mcpServers.shell
+   -> Identity: Linux user deploy (uid 1001) [discovered] (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.agentUser
+   -> Identity Hop: can read AWS credential file /home/ops/.aws/credentials (profile ops) (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.credentialFiles[0].awsProfiles[0]
+   -> Identity: AWS role arn:aws:iam::123456789012:role/ops [discovered]
+        evidence: snapshots/aws.json $.aws.identities[0]
+   -> Native Permission: Allow ec2:DescribeInstances on *
+        evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[1]
+   -> Impact: unknown
+        evidence: agentguard:impact-mappings/v2 $.mappings
+   confidence reduced: Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis
+   confidence reduced: Blind Spot in Environment build-host: the Collector could not complete "read /etc/sudoers" (permission denied)
+   confidence reduced: Blind Spot in Environment prod-aws: the Collector could not complete "organizations:ListPolicies (SCPs)" (not collected)
+
+2. unknown  deploy-agent (confidence: reduced)
+   fingerprint rpf1:20aa54eac58194265784c423644f35b544093e25becc328c247ed5d549826301, resource sensitivity unknown
+      Tool: shell Tool (MCP server shell)
+        evidence: .mcp.json $.mcpServers.shell
+   -> Identity: Linux user deploy (uid 1001) [discovered] (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.agentUser
+   -> Identity Hop: can read AWS credential file /home/ops/.aws/credentials (profile ops) (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.credentialFiles[0].awsProfiles[0]
+   -> Identity: AWS role arn:aws:iam::123456789012:role/ops [discovered]
+        evidence: snapshots/aws.json $.aws.identities[0]
+   -> Native Permission: Allow s3:* on *
+        evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[0]
+   -> Impact: Exfiltrate
+        evidence: agentguard:impact-mappings/v2 $.mappings[7]
+   confidence reduced: Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis
+   confidence reduced: Blind Spot in Environment build-host: the Collector could not complete "read /etc/sudoers" (permission denied)
+   confidence reduced: Blind Spot in Environment prod-aws: the Collector could not complete "organizations:ListPolicies (SCPs)" (not collected)
+
+3. unknown  deploy-agent (confidence: reduced)
+   fingerprint rpf1:29b263e9a34e670d0cd272537f0d69415dc8f45e7688395146b219010dcb10f9, resource sensitivity unknown
+      Tool: shell Tool (MCP server shell)
+        evidence: .mcp.json $.mcpServers.shell
+   -> Identity: Linux user deploy (uid 1001) [discovered] (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.agentUser
+   -> Identity Hop: can read AWS credential file /home/ops/.aws/credentials (profile ops) (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.credentialFiles[0].awsProfiles[0]
+   -> Identity: AWS role arn:aws:iam::123456789012:role/ops [discovered]
+        evidence: snapshots/aws.json $.aws.identities[0]
+   -> Native Permission: Allow s3:* on *
+        evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[0]
+   -> Impact: Destroy Data
+        evidence: agentguard:impact-mappings/v2 $.mappings[3]
+   confidence reduced: Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis
+   confidence reduced: Blind Spot in Environment build-host: the Collector could not complete "read /etc/sudoers" (permission denied)
+   confidence reduced: Blind Spot in Environment prod-aws: the Collector could not complete "organizations:ListPolicies (SCPs)" (not collected)
+
+4. unknown  deploy-agent (confidence: reduced)
+   fingerprint rpf1:893fb7aaa06bf7f8f2c5fb0f1c611dfb787d51eab6bdedc92677c11ccf7342b0, resource sensitivity unknown
+      Tool: shell Tool (MCP server shell)
+        evidence: .mcp.json $.mcpServers.shell
+   -> Identity: Linux user deploy (uid 1001) [discovered] (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.agentUser
+   -> Identity Hop: can read AWS credential file /home/ops/.aws/credentials (profile ops) (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.credentialFiles[0].awsProfiles[0]
+   -> Identity: AWS role arn:aws:iam::123456789012:role/ops [discovered]
+        evidence: snapshots/aws.json $.aws.identities[0]
+   -> Native Permission: Allow logs:GetLogEvents on *
+        evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[1]
+   -> Impact: unknown
+        evidence: agentguard:impact-mappings/v2 $.mappings
+   confidence reduced: Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis
+   confidence reduced: Blind Spot in Environment build-host: the Collector could not complete "read /etc/sudoers" (permission denied)
+   confidence reduced: Blind Spot in Environment prod-aws: the Collector could not complete "organizations:ListPolicies (SCPs)" (not collected)
+
+5. unknown  deploy-agent (confidence: reduced)
+   fingerprint rpf1:9b81eab48df251abfeee7752aac4a5678c1aa8d6275f061145d77679373812fe, resource sensitivity unknown
+      Tool: shell Tool (MCP server shell)
+        evidence: .mcp.json $.mcpServers.shell
+   -> Identity: Linux user deploy (uid 1001) [discovered] (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.agentUser
+   -> Identity Hop: can read AWS credential file /home/ops/.aws/credentials (profile ops) (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.credentialFiles[0].awsProfiles[0]
+   -> Identity: AWS role arn:aws:iam::123456789012:role/ops [discovered]
+        evidence: snapshots/aws.json $.aws.identities[0]
+   -> Native Permission: Allow s3:* on *
+        evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[0]
+   -> Impact: Read Data
+        evidence: agentguard:impact-mappings/v2 $.mappings[0]
+   confidence reduced: Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis
+   confidence reduced: Blind Spot in Environment build-host: the Collector could not complete "read /etc/sudoers" (permission denied)
+   confidence reduced: Blind Spot in Environment prod-aws: the Collector could not complete "organizations:ListPolicies (SCPs)" (not collected)
+
+6. unknown  deploy-agent (confidence: reduced)
+   fingerprint rpf1:ebb33c15021118577a7c69ebfb148341f24fa3fb24590a930ab8e3fa3e28b71b, resource sensitivity unknown
+      Tool: shell Tool (MCP server shell)
+        evidence: .mcp.json $.mcpServers.shell
+   -> Identity: Linux user deploy (uid 1001) [discovered] (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.agentUser
+   -> Identity Hop: can read AWS credential file /home/ops/.aws/credentials (profile ops) (confidence: reduced, Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis)
+        evidence: snapshots/linux.json $.linux.credentialFiles[0].awsProfiles[0]
+   -> Identity: AWS role arn:aws:iam::123456789012:role/ops [discovered]
+        evidence: snapshots/aws.json $.aws.identities[0]
+   -> Native Permission: Allow s3:* on *
+        evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[0]
+   -> Impact: Modify Data
+        evidence: agentguard:impact-mappings/v2 $.mappings[2]
+   confidence reduced: Stale Snapshot snap-linux-0001: collected at 2026-11-01T10:00:00Z, more than 168h0m0s before the analysis
+   confidence reduced: Blind Spot in Environment build-host: the Collector could not complete "read /etc/sudoers" (permission denied)
+   confidence reduced: Blind Spot in Environment prod-aws: the Collector could not complete "organizations:ListPolicies (SCPs)" (not collected)
+
+Secondary Findings: 2
+  - unrestricted command execution: shell Tool (MCP server shell) (deploy-agent)
+      evidence: .mcp.json $.mcpServers.shell
+  - wildcard policy: Allow s3:* on * (AWS role arn:aws:iam::123456789012:role/ops) (deploy-agent)
+      evidence: snapshots/aws.json $.aws.identities[0].policies[0].document.Statement[0]
+
+Blind Spots: 2
+  - build-host: could not complete "read /etc/sudoers" (permission denied)
+      evidence: snapshots/linux.json $.blindSpots[0]
+  - prod-aws: could not complete "organizations:ListPolicies (SCPs)" (not collected)
+      evidence: snapshots/aws.json $.blindSpots[0]
