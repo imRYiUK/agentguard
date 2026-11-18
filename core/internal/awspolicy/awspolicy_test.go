@@ -200,13 +200,17 @@ func TestGrantNamesTheStatementAndActionPatternThatGrantedIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(grants) != 1 {
-		t.Fatalf("want one grant, got %d", len(grants))
+	// Both s3:Get* and * of the second statement cover the action, so each is
+	// a Grant, in the order the statement lists them. ec2:* covers neither.
+	if len(grants) != 2 {
+		t.Fatalf("want two grants, got %d", len(grants))
 	}
-	g := grants[0]
-	if g.Statement.Policy != 1 || g.Statement.Location != "$.Statement[0]" || g.Action != "s3:Get*" {
-		t.Errorf("got policy %d, location %q, action %q; want policy 1, location $.Statement[0], action s3:Get*",
-			g.Statement.Policy, g.Statement.Location, g.Action)
+	for i, wantAction := range []string{"s3:Get*", "*"} {
+		g := grants[i]
+		if g.Statement.Policy != 1 || g.Statement.Location != "$.Statement[0]" || g.Action != wantAction {
+			t.Errorf("grant %d: got policy %d, location %q, action %q; want policy 1, location $.Statement[0], action %s",
+				i, g.Statement.Policy, g.Statement.Location, g.Action, wantAction)
+		}
 	}
 }
 
@@ -543,4 +547,18 @@ func TestStatementWildcard(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Issue #29: every Action entry that covers the action is a Grant of its own,
+// because Permissions lists each entry as a Native Permission and a caller
+// matches the two by Action entry.
+func TestEveryCoveringActionEntryOfAStatementIsAGrant(t *testing.T) {
+	assertGrants(t, evaluate(t, "s3:DeleteObject", allow("s3:*,s3:DeleteObject,s3:Get*", "*")),
+		"s3:* on *", "s3:DeleteObject on *")
+}
+
+func TestADenyRemovesEachCoveringActionEntryOnItsOwn(t *testing.T) {
+	assertGrants(t, evaluate(t, "s3:DeleteObject",
+		allow("s3:*,s3:DeleteObject", "arn:aws:s3:::a,arn:aws:s3:::b"), deny("s3:*", "arn:aws:s3:::a")),
+		"s3:* on arn:aws:s3:::b", "s3:DeleteObject on arn:aws:s3:::b")
 }

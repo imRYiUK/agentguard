@@ -65,7 +65,8 @@ type Grant struct {
 // Evaluate returns the Grants of action under statements, which must be all
 // the statements that apply to one Identity. action may itself contain
 // wildcards, as an Impact mapping names an action; a Grant then covers all
-// the actions it stands for. The result is in statement order. A nil budget
+// the actions it stands for. A statement gives one Grant for each Action
+// entry that covers the action. The result is in statement order. A nil budget
 // is a fresh one of limits.MaxPolicyEvalSteps.
 func Evaluate(statements []Statement, action string, budget *Budget) ([]Grant, error) {
 	if budget == nil {
@@ -77,19 +78,17 @@ func Evaluate(statements []Statement, action string, budget *Budget) ([]Grant, e
 		if st.Effect != Allow {
 			continue
 		}
-		pattern, ok := allowedBy(st, action, budget)
-		if !ok {
-			continue
-		}
-		for _, resource := range grantResources(st) {
-			g := Grant{Statement: st, Action: pattern, Resource: resource}
-			if st.Conditional {
-				g.Conditional, g.Reason = true, ReasonAllowCondition
+		for _, pattern := range allowedBy(st, action, budget) {
+			for _, resource := range grantResources(st) {
+				g := Grant{Statement: st, Action: pattern, Resource: resource}
+				if st.Conditional {
+					g.Conditional, g.Reason = true, ReasonAllowCondition
+				}
+				if removeOrQualify(&g, statements, action, budget) {
+					continue
+				}
+				grants = append(grants, g)
 			}
-			if removeOrQualify(&g, statements, action, budget) {
-				continue
-			}
-			grants = append(grants, g)
 		}
 	}
 	if budget.exhausted {
@@ -183,25 +182,28 @@ func ResourceInService(resource, service string, budget *Budget) bool {
 	return covers(parts[2], service, true, budget)
 }
 
-// allowedBy reports whether an Allow statement covers the action, and the
-// Action entry that does. A NotAction statement covers every action but the
-// ones it lists. The action asked about may stand for many actions, so the
-// statement covers it unless a NotAction entry covers all of them.
-func allowedBy(st *Statement, action string, b *Budget) (string, bool) {
+// allowedBy returns the Action entries of an Allow statement that cover the
+// action, each of which is a Grant of its own, as it is one Native Permission
+// in Permissions. A NotAction statement covers every action but the ones it
+// lists, and is one entry with no pattern. The action asked about may stand
+// for many actions, so the statement covers it unless a NotAction entry covers
+// all of them.
+func allowedBy(st *Statement, action string, b *Budget) []string {
 	if len(st.NotActions) > 0 {
 		for _, pattern := range st.NotActions {
 			if covers(pattern, action, true, b) {
-				return "", false
+				return nil
 			}
 		}
-		return "", true
+		return []string{""}
 	}
+	var entries []string
 	for _, pattern := range st.Actions {
 		if covers(pattern, action, true, b) {
-			return pattern, true
+			entries = append(entries, pattern)
 		}
 	}
-	return "", false
+	return entries
 }
 
 // The reasons a Grant is Conditional.

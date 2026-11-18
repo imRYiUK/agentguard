@@ -260,3 +260,15 @@ func TestAReadOnlyS3PolicyGivesNoDestroyDataPath(t *testing.T) {
 		}
 	}
 }
+
+// Issue #29: a narrow Action entry listed beside a broad one in the same
+// statement is its own Native Permission, and its mapped Impact is not lost.
+func TestANarrowActionBesideABroadOneKeepsItsImpact(t *testing.T) {
+	files := withPolicy(t, `[{"Effect":"Allow","Action":["s3:*","s3:DeleteObject"],"Resource":"*"}]`)
+	assertImpacts(t, impacts(t, files),
+		"Allow s3:* on * => Read Data",
+		"Allow s3:* on * => Modify Data",
+		"Allow s3:* on * => Destroy Data",
+		"Allow s3:* on * => Exfiltrate",
+		"Allow s3:DeleteObject on * => Destroy Data")
+}
