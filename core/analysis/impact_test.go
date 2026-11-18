@@ -189,3 +189,74 @@ func TestAConditionalGrantGivesAReducedConfidenceImpact(t *testing.T) {
 		t.Errorf("want one REDUCED Reach Path, got %v", result.ReachPaths)
 	}
 }
+
+// Issue #19: an Allow of only a destructive S3 action is Destroy Data. The
+// table names concrete actions, so a grant of one, or of a wildcard that
+// covers it, needs no s3:* row.
+func TestAnAllowOfOnlyADestructiveS3ActionIsDestroyData(t *testing.T) {
+	for _, tc := range []struct {
+		name, action string
+		want         []string
+	}{
+		{"DeleteObject", "s3:DeleteObject", []string{"Allow s3:DeleteObject on * => Destroy Data"}},
+		{"DeleteBucket", "s3:DeleteBucket", []string{"Allow s3:DeleteBucket on * => Destroy Data"}},
+		{"Delete wildcard", "s3:Delete*", []string{"Allow s3:Delete* on * => Destroy Data"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			files := withPolicy(t, `[{"Effect":"Allow","Action":"`+tc.action+`","Resource":"*"}]`)
+			assertImpacts(t, impacts(t, files), tc.want...)
+		})
+	}
+}
+
+// s3:* matches many rows with Destroy Data, but the permission reaches that
+// Impact once.
+func TestAnS3WildcardGivesOneDestroyDataPathNotOnePerRow(t *testing.T) {
+	files := withPolicy(t, `[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]`)
+	got := impacts(t, files)
+	n := 0
+	for _, line := range got {
+		if strings.HasSuffix(line, "=> Destroy Data") {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("want one Destroy Data Reach Path, got %d in\n  %s", n, strings.Join(got, "\n  "))
+	}
+	if !slices.Contains(got, "Allow s3:* on * => Destroy Data") {
+		t.Errorf("the Destroy Data path should be the s3:* permission's, got\n  %s", strings.Join(got, "\n  "))
+	}
+}
+
+// The count is per Native Permission: s3:* and s3:DeleteObject are two
+// permissions, so each reaches Destroy Data once.
+func TestEachNativePermissionGetsItsOwnDestroyDataPath(t *testing.T) {
+	files := withPolicy(t, `[
+		{"Effect":"Allow","Action":"s3:*","Resource":"*"},
+		{"Effect":"Allow","Action":"s3:DeleteObject","Resource":"*"}]`)
+	got := impacts(t, files)
+	for _, want := range []string{"Allow s3:* on * => Destroy Data", "Allow s3:DeleteObject on * => Destroy Data"} {
+		if n := countOf(got, want); n != 1 {
+			t.Errorf("%q appears %d times, want 1, in\n  %s", want, n, strings.Join(got, "\n  "))
+		}
+	}
+}
+
+func countOf(lines []string, want string) int {
+	n := 0
+	for _, l := range lines {
+		if l == want {
+			n++
+		}
+	}
+	return n
+}
+
+func TestAReadOnlyS3PolicyGivesNoDestroyDataPath(t *testing.T) {
+	files := withPolicy(t, `[{"Effect":"Allow","Action":["s3:Get*","s3:List*"],"Resource":"*"}]`)
+	for _, line := range impacts(t, files) {
+		if strings.HasSuffix(line, "=> Destroy Data") {
+			t.Errorf("a read-only policy must not give Destroy Data: %s", line)
+		}
+	}
+}

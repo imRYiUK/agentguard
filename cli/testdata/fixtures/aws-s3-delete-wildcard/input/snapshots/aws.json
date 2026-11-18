@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1",
+  "snapshotId": "snap-aws-0001",
+  "collectorVersion": "0.0.0-fixture",
+  "collectedAt": "2026-11-17T10:05:00Z",
+  "collectedBy": "arn:aws:iam::123456789012:user/reviewer",
+  "environment": {
+    "aws": {
+      "accountId": "123456789012"
+    }
+  },
+  "blindSpots": [
+    {
+      "attempted": "organizations:ListPolicies (SCPs)",
+      "reason": "not collected"
+    }
+  ],
+  "aws": {
+    "identities": [
+      {
+        "arn": "arn:aws:iam::123456789012:role/ops",
+        "accessKeyIdFingerprints": [
+          "sha256:2199c040063f5758eba7a989455e6c716f3ac3ad2aa6f73b9b3ae8967d192380"
+        ],
+        "policies": [
+          {
+            "name": "ops-access",
+            "kind": "POLICY_KIND_INLINE",
+            "document": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:Delete*",
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
